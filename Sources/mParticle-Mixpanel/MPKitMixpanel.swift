@@ -40,8 +40,65 @@ private enum ConfigurationKey {
     // MARK: - MPKitProtocol Lifecycle
 
     @objc public func didFinishLaunching(withConfiguration configuration: [AnyHashable: Any]) -> MPKitExecStatus {
-        // Will be implemented in Task 6
+        // Store configuration
+        self.configuration = configuration
+
+        // Parse required token
+        guard let token = configuration[ConfigurationKey.token] as? String, !token.isEmpty else {
+            return execStatus(.requirementsNotMet)
+        }
+        self.token = token
+
+        // Parse optional server URL
+        if let serverURL = configuration[ConfigurationKey.serverURL] as? String, !serverURL.isEmpty {
+            self.serverURL = serverURL
+        }
+
+        // Parse user identification type (default: CustomerId)
+        if let typeString = configuration[ConfigurationKey.userIdentificationType] as? String,
+           let type = UserIdentificationType(rawValue: typeString) {
+            self.userIdentificationType = type
+        }
+
+        // Parse useMixpanelPeople (default: true)
+        if let peopleString = configuration[ConfigurationKey.useMixpanelPeople] as? String {
+            self.useMixpanelPeople = peopleString.lowercased() == "true"
+        }
+
+        // Start the kit
+        startKit()
+
         return execStatus(.success)
+    }
+
+    private func startKit() {
+        // Initialize Mixpanel with configuration
+        guard let token = self.token else { return }
+
+        if let serverURL = self.serverURL {
+            self.mixpanelInstance = Mixpanel.initialize(
+                token: token,
+                trackAutomaticEvents: false,
+                serverURL: serverURL
+            )
+        } else {
+            self.mixpanelInstance = Mixpanel.initialize(
+                token: token,
+                trackAutomaticEvents: false
+            )
+        }
+
+        self.started = true
+
+        // Post notification that kit is active
+        DispatchQueue.main.async {
+            let userInfo = [mParticleKitInstanceKey: Self.kitCode()]
+            NotificationCenter.default.post(
+                name: .mParticleKitDidBecomeActive,
+                object: nil,
+                userInfo: userInfo
+            )
+        }
     }
 
     // MARK: - Helpers
