@@ -10,7 +10,29 @@
 
 ---
 
+## Context Directory Overview
+
+The `mparticle-kit-context/` directory contains reference materials essential for implementation:
+
+| Directory | Purpose | Key Files |
+|-----------|---------|-----------|
+| `docs/` | Official mParticle Kit documentation | `ios-kit-implementation.md`, `ios-kit-integration.md`, `overview.md` |
+| `example-kits/mparticle-apple-integration-example/` | iOS Kit template | `MPKitExample.h/m`, `Package.swift`, podspec |
+| `example-kits/mparticle-javascript-integration-mixpanel/` | Feature parity reference | `MixpanelEventForwarder.js` (primary feature source) |
+| `mixpanel-sdks/mixpanel-swift/` | Mixpanel Swift SDK source | `Mixpanel.swift`, `MixpanelInstance.swift`, `People.swift`, `Track.swift` |
+
+**Also reference:**
+- `ARCHITECTURE.md` - Kit architecture patterns and lifecycle documentation
+- `PROJECT_REQUIREMENTS.md` - Feature requirements (FR-001 to FR-073) and API mappings
+
+---
+
 ## Task 1: Create Swift Package Structure
+
+**Context References:**
+- `mparticle-kit-context/docs/ios-kit-implementation.md` - Project structure and naming conventions
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/Package.swift` - SPM manifest template
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/CLAUDE.md` - iOS Kit patterns overview
 
 **Files:**
 - Create: `Package.swift`
@@ -115,6 +137,10 @@ git commit -m "feat: create Swift Package structure with dependencies"
 
 ## Task 2: Create CocoaPods Podspec
 
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/mParticle-Integration-Example.podspec` - Podspec template
+- `mparticle-kit-context/docs/ios-kit-integration.md` - CocoaPods integration instructions
+
 **Files:**
 - Create: `mParticle-Mixpanel.podspec`
 
@@ -162,6 +188,9 @@ git commit -m "feat: add CocoaPods podspec"
 ---
 
 ## Task 3: Create LICENSE and .gitignore
+
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/` - Reference for standard mParticle open source licensing
 
 **Files:**
 - Create: `LICENSE`
@@ -398,6 +427,11 @@ git commit -m "chore: add LICENSE and update .gitignore"
 
 ## Task 4: Implement Kit Registration and Configuration Types
 
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:77-100` - Configuration settings and userIdentificationType enum values
+- `mparticle-kit-context/docs/ios-kit-implementation.md` - Configuration handling patterns
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/CLAUDE.md` - Feature parity reference
+
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
 - Create: `Sources/mParticle-Mixpanel/UserIdentificationType.swift`
@@ -471,6 +505,12 @@ git commit -m "feat: add UserIdentificationType enum for identity mapping"
 ---
 
 ## Task 5: Implement MPKitProtocol Conformance Skeleton
+
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.m:30-60` - MPKitProtocol conformance pattern
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.h` - Kit class structure and protocol
+- `mparticle-kit-context/docs/ios-kit-implementation.md` - Kit registration and kitCode() method
+- `ARCHITECTURE.md:100-145` - Kit lifecycle and registration pattern
 
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
@@ -572,6 +612,12 @@ git commit -m "feat: implement MPKitProtocol skeleton with kit code 178"
 ---
 
 ## Task 6: Implement didFinishLaunchingWithConfiguration
+
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.m:80-130` - didFinishLaunchingWithConfiguration implementation
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:105-150` - initForwarder() config parsing (JS equivalent)
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/Mixpanel.swift` - Mixpanel.initialize() API
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/CLAUDE.md` - Swift SDK initialization patterns
 
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
@@ -737,6 +783,11 @@ git commit -m "feat: implement didFinishLaunchingWithConfiguration with config p
 
 ## Task 7: Implement providerKitInstance
 
+**Context References:**
+- `mparticle-kit-context/docs/ios-kit-implementation.md` - providerKitInstance requirement (FR-070)
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/MixpanelInstance.swift` - MixpanelInstance class to return
+- `PROJECT_REQUIREMENTS.md:192-196` - Kit infrastructure requirements
+
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
 - Modify: `Tests/mParticle-MixpanelTests/InitializationTests.swift`
@@ -798,6 +849,12 @@ git commit -m "feat: implement providerKitInstance"
 ---
 
 ## Task 8: Implement Event Forwarding (routeEvent)
+
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:160-200` - logEvent() implementation pattern
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/Track.swift` - track(event:properties:) API
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.m:150-180` - routeEvent implementation
+- `ARCHITECTURE.md:320-340` - Event type mapping (mParticle → Mixpanel)
 
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
@@ -914,6 +971,11 @@ git commit -m "feat: implement routeEvent for custom event forwarding"
 
 ## Task 9: Implement logBaseEvent Router
 
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:140-160` - processEvent() router pattern
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.m:140-160` - logBaseEvent implementation
+- `mparticle-kit-context/docs/overview.md` - Event type routing architecture
+
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
 - Modify: `Tests/mParticle-MixpanelTests/EventForwardingTests.swift`
@@ -985,6 +1047,11 @@ git commit -m "feat: implement logBaseEvent router"
 
 ## Task 10: Implement logScreen for Screen Views
 
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:200-220` - logPageView() with "Viewed " prefix
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.m:180-200` - logScreen implementation
+- `ARCHITECTURE.md:242` - Screen view mapping ("Viewed X" pattern)
+
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
 - Modify: `Tests/mParticle-MixpanelTests/EventForwardingTests.swift`
@@ -1053,6 +1120,12 @@ git commit -m "feat: implement logScreen with 'Viewed' prefix"
 ---
 
 ## Task 11: Implement Identity Handling (Login/Logout)
+
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:250-350` - Identity handling (onLoginComplete, onLogoutComplete, onIdentifyComplete)
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/MixpanelInstance.swift` - identify(distinctId:) and reset() APIs
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.m:200-250` - Identity method implementations
+- `ARCHITECTURE.md:280-300` - Configurable identity mapping pattern
 
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
@@ -1207,6 +1280,12 @@ git commit -m "feat: implement identity handling (login, logout, identify, modif
 
 ## Task 12: Implement User Attributes
 
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:350-420` - setUserAttribute with useMixpanelPeople toggle
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/People.swift` - people.set(property:to:) API
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/MixpanelInstance.swift` - registerSuperProperties() API
+- `ARCHITECTURE.md:296-305` - User attribute mode toggle pattern
+
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
 - Create: `Tests/mParticle-MixpanelTests/UserAttributeTests.swift`
@@ -1326,6 +1405,12 @@ git commit -m "feat: implement user attribute handling with People/SuperProps to
 ---
 
 ## Task 13: Implement Commerce Events
+
+**Context References:**
+- `mparticle-kit-context/example-kits/mparticle-javascript-integration-mixpanel/src/MixpanelEventForwarder.js:420-480` - logPurchaseEvent() with people.track_charge()
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/People.swift` - people.trackCharge(amount:properties:) API
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/MPKitExample.m:250-300` - routeCommerceEvent implementation
+- `PROJECT_REQUIREMENTS.md:165-170` - Commerce event requirements (FR-040 to FR-042)
 
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
@@ -1457,6 +1542,11 @@ git commit -m "feat: implement commerce event handling with trackCharge"
 
 ## Task 14: Implement Opt-Out Support
 
+**Context References:**
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/Sources/MixpanelInstance.swift` - optOutTracking() and optInTracking() APIs
+- `mparticle-kit-context/mixpanel-sdks/mixpanel-swift/CLAUDE.md` - GDPR/privacy compliance methods
+- `PROJECT_REQUIREMENTS.md:180-187` - Privacy & compliance requirements (FR-060 to FR-062)
+
 **Files:**
 - Modify: `Sources/mParticle-Mixpanel/MPKitMixpanel.swift`
 - Modify: `Tests/mParticle-MixpanelTests/InitializationTests.swift`
@@ -1529,6 +1619,11 @@ git commit -m "feat: implement setOptOut for GDPR compliance"
 ---
 
 ## Task 15: Create README Documentation
+
+**Context References:**
+- `mparticle-kit-context/docs/ios-kit-integration.md` - Integration instructions template
+- `mparticle-kit-context/example-kits/mparticle-apple-integration-example/README.md` - README structure template (if exists)
+- `PROJECT_REQUIREMENTS.md:220-235` - Configuration and API mapping tables
 
 **Files:**
 - Create: `README.md`
@@ -1654,6 +1749,11 @@ git commit -m "docs: add README with installation and usage instructions"
 ---
 
 ## Task 16: Run Full Test Suite and Final Commit
+
+**Context References:**
+- `PROJECT_REQUIREMENTS.md:360-418` - Testing strategy and success criteria
+- `PROJECT_REQUIREMENTS.md:419-460` - Definition of Done checklist
+- `mparticle-kit-context/docs/ios-kit-implementation.md` - Final verification steps
 
 **Files:**
 - All files
