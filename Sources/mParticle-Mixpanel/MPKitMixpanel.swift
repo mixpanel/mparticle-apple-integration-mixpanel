@@ -257,6 +257,22 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
+    // MARK: - Opt Out
+
+    @objc public func setOptOut(_ optOut: Bool) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        if optOut {
+            mixpanel.optOutTracking()
+        } else {
+            mixpanel.optInTracking()
+        }
+
+        return execStatus(.success)
+    }
+
     // MARK: - Identity Helpers
 
     private func extractUserId(from user: FilteredMParticleUser?) -> String? {

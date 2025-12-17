@@ -81,4 +81,34 @@ final class InitializationTests: XCTestCase {
 
         XCTAssertNil(instance)
     }
+
+    // MARK: - Opt-Out Tests
+
+    func testSetOptOut_True_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = ["token": "test-token"]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.setOptOut(true)
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testSetOptOut_False_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = ["token": "test-token"]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.setOptOut(false)
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testSetOptOut_WhenNotStarted_ReturnsFail() {
+        let kit = MPKitMixpanel()
+
+        let status = kit.setOptOut(true)
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
+    }
 }
