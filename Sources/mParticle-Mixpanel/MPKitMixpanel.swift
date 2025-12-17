@@ -191,6 +191,45 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
+    // MARK: - User Attributes
+
+    @objc public func onSetUserAttribute(_ user: FilteredMParticleUser?) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        guard let user = user,
+              let changedAttribute = user.userAttributes.keys.first as? String,
+              let value = user.userAttributes[changedAttribute] else {
+            return execStatus(.success)
+        }
+
+        if useMixpanelPeople {
+            // Use People API
+            if let mixpanelValue = value as? MixpanelType {
+                mixpanel.people.set(property: changedAttribute, to: mixpanelValue)
+            }
+        } else {
+            // Use Super Properties
+            if let mixpanelValue = value as? MixpanelType {
+                mixpanel.registerSuperProperties([changedAttribute: mixpanelValue])
+            }
+        }
+
+        return execStatus(.success)
+    }
+
+    @objc public func onRemoveUserAttribute(_ user: FilteredMParticleUser?) -> MPKitExecStatus {
+        guard started else {
+            return execStatus(.fail)
+        }
+
+        // Note: mParticle provides the attribute key that was removed
+        // For now, return success as we don't have the removed key in FilteredMParticleUser
+
+        return execStatus(.success)
+    }
+
     // MARK: - Identity Helpers
 
     private func extractUserId(from user: FilteredMParticleUser?) -> String? {
