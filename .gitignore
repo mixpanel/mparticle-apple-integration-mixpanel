@@ -2,6 +2,7 @@
 .build/
 .swiftpm/
 Packages/
+Package.resolved
 xcuserdata/
 DerivedData/
 *.xcodeproj/project.xcworkspace/xcuserdata/
@@ -18,3 +19,8 @@ Carthage/Build/
 !default.mode2v3
 *.perspectivev3
 !default.perspectivev3
+.claude/
+docs/
+mparticle-kit-context/
+ARCHITECTURE.md
+PROJECT_REQUIREMENTS.md
