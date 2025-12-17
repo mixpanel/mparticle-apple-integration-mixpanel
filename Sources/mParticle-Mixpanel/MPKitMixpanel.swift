@@ -101,6 +101,38 @@ private enum ConfigurationKey {
         }
     }
 
+    // MARK: - Event Forwarding
+
+    @objc public func routeEvent(_ event: MPEvent) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        let eventName = event.name
+        guard !eventName.isEmpty else {
+            return execStatus(.fail)
+        }
+
+        let properties = convertToMixpanelProperties(event.customAttributes)
+        mixpanel.track(event: eventName, properties: properties)
+
+        return execStatus(.success)
+    }
+
+    // MARK: - Property Conversion
+
+    private func convertToMixpanelProperties(_ attributes: [String: Any]?) -> Properties? {
+        guard let attributes = attributes else { return nil }
+
+        var properties: Properties = [:]
+        for (key, value) in attributes {
+            if let mixpanelValue = value as? MixpanelType {
+                properties[key] = mixpanelValue
+            }
+        }
+        return properties.isEmpty ? nil : properties
+    }
+
     // MARK: - Provider Instance
 
     @objc public var providerKitInstance: Any? {
