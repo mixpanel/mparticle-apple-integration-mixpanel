@@ -146,9 +146,36 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
-    // Placeholder for commerce events - will be implemented in Task 13
+    // MARK: - Commerce Events
+
     @objc public func routeCommerceEvent(_ commerceEvent: MPCommerceEvent) -> MPKitExecStatus {
-        return execStatus(.success)
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        let status = MPKitExecStatus(sdkCode: Self.kitCode(), returnCode: .success)
+
+        // Handle Purchase events with People API
+        if commerceEvent.action == .purchase {
+            if useMixpanelPeople {
+                let revenue = commerceEvent.transactionAttributes?.revenue?.doubleValue ?? 0.0
+                let properties = convertToMixpanelProperties(commerceEvent.customAttributes)
+                mixpanel.people.trackCharge(amount: revenue, properties: properties)
+            }
+            status.incrementForwardCount()
+        } else {
+            // Expand non-purchase commerce events to regular events
+            if let expandedEvents = commerceEvent.expandedInstructions() as? [MPCommerceEventInstruction] {
+                for instruction in expandedEvents {
+                    if let event = instruction.event {
+                        _ = routeEvent(event)
+                        status.incrementForwardCount()
+                    }
+                }
+            }
+        }
+
+        return status
     }
 
     // MARK: - Identity Handling
