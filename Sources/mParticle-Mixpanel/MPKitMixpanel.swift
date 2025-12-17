@@ -101,6 +101,13 @@ private enum ConfigurationKey {
         }
     }
 
+    // MARK: - Provider Instance
+
+    @objc public var providerKitInstance: Any? {
+        guard started else { return nil }
+        return mixpanelInstance
+    }
+
     // MARK: - Helpers
 
     private func execStatus(_ returnCode: MPKitReturnCode) -> MPKitExecStatus {

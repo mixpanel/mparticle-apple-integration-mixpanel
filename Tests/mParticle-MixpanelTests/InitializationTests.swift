@@ -61,4 +61,24 @@ final class InitializationTests: XCTestCase {
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
+
+    // MARK: - providerKitInstance Tests
+
+    func testProviderKitInstance_WhenStarted_ReturnsMixpanelInstance() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = ["token": "test-token"]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let instance = kit.providerKitInstance
+
+        XCTAssertNotNil(instance)
+    }
+
+    func testProviderKitInstance_WhenNotStarted_ReturnsNil() {
+        let kit = MPKitMixpanel()
+
+        let instance = kit.providerKitInstance
+
+        XCTAssertNil(instance)
+    }
 }
