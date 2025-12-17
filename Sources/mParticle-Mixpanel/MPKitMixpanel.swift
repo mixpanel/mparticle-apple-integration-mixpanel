@@ -151,6 +151,69 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
+    // MARK: - Identity Handling
+
+    @objc public func onIdentifyComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+        guard started else { return execStatus(.fail) }
+
+        if let userId = extractUserId(from: user) {
+            mixpanelInstance?.identify(distinctId: userId)
+        }
+
+        return execStatus(.success)
+    }
+
+    @objc public func onLoginComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+        guard started else { return execStatus(.fail) }
+
+        if let userId = extractUserId(from: user) {
+            mixpanelInstance?.identify(distinctId: userId)
+        }
+
+        return execStatus(.success)
+    }
+
+    @objc public func onLogoutComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+        guard started else { return execStatus(.fail) }
+
+        mixpanelInstance?.reset()
+
+        return execStatus(.success)
+    }
+
+    @objc public func onModifyComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+        guard started else { return execStatus(.fail) }
+
+        if let userId = extractUserId(from: user) {
+            mixpanelInstance?.identify(distinctId: userId)
+        }
+
+        return execStatus(.success)
+    }
+
+    // MARK: - Identity Helpers
+
+    private func extractUserId(from user: FilteredMParticleUser?) -> String? {
+        guard let user = user else { return nil }
+
+        let userIdentities = user.userIdentities
+
+        switch userIdentificationType {
+        case .customerId:
+            return userIdentities[NSNumber(value: MPUserIdentity.customerId.rawValue)]
+        case .mpid:
+            return user.userId.stringValue
+        case .other:
+            return userIdentities[NSNumber(value: MPUserIdentity.other.rawValue)]
+        case .other2:
+            return userIdentities[NSNumber(value: MPUserIdentity.other2.rawValue)]
+        case .other3:
+            return userIdentities[NSNumber(value: MPUserIdentity.other3.rawValue)]
+        case .other4:
+            return userIdentities[NSNumber(value: MPUserIdentity.other4.rawValue)]
+        }
+    }
+
     // MARK: - Property Conversion
 
     private func convertToMixpanelProperties(_ attributes: [String: Any]?) -> Properties? {
