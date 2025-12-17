@@ -129,6 +129,23 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
+    @objc public func logScreen(_ event: MPEvent) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        let screenName = event.name
+        guard !screenName.isEmpty else {
+            return execStatus(.fail)
+        }
+
+        let eventName = "Viewed \(screenName)"
+        let properties = convertToMixpanelProperties(event.customAttributes)
+        mixpanel.track(event: eventName, properties: properties)
+
+        return execStatus(.success)
+    }
+
     // Placeholder for commerce events - will be implemented in Task 13
     @objc public func routeCommerceEvent(_ commerceEvent: MPCommerceEvent) -> MPKitExecStatus {
         return execStatus(.success)

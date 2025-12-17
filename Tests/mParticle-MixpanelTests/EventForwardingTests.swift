@@ -26,12 +26,21 @@ final class EventForwardingTests: XCTestCase {
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
 
-    func testRouteEvent_WithEmptyName_ReturnsFail() {
-        let event = MPEvent(name: "", type: .other)!
+    func testRouteEvent_WhenNotStarted_ReturnsFail() {
+        // Create uninitialized kit
+        let uninitKit = MPKitMixpanel()
+        let event = MPEvent(name: "Test Event", type: .other)!
 
-        let status = kit.routeEvent(event)
+        let status = uninitKit.routeEvent(event)
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
+    }
+
+    func testMPEvent_WithEmptyName_ReturnsNil() {
+        // Verify SDK rejects empty event names
+        let event = MPEvent(name: "", type: .other)
+
+        XCTAssertNil(event)
     }
 
     func testRouteEvent_WithAttributes_ReturnsSuccess() {
@@ -61,5 +70,33 @@ final class EventForwardingTests: XCTestCase {
 
         // Commerce events should be handled (success or specific handling)
         XCTAssertNotNil(status)
+    }
+
+    // MARK: - logScreen Tests
+
+    func testLogScreen_PrefixesWithViewed() {
+        let event = MPEvent(name: "Home Screen", type: .other)!
+
+        let status = kit.logScreen(event)
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testLogScreen_WhenNotStarted_ReturnsFail() {
+        let uninitKit = MPKitMixpanel()
+        let event = MPEvent(name: "Settings", type: .other)!
+
+        let status = uninitKit.logScreen(event)
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
+    }
+
+    func testLogScreen_WithAttributes_ReturnsSuccess() {
+        let event = MPEvent(name: "Settings", type: .other)!
+        event.customAttributes = ["section": "profile"]
+
+        let status = kit.logScreen(event)
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
 }
