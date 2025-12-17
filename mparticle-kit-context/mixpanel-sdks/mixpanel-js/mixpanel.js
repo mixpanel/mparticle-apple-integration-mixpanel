@@ -1,0 +1,1 @@
+dist/mixpanel.globals.js
