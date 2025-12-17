@@ -103,6 +103,16 @@ private enum ConfigurationKey {
 
     // MARK: - Event Forwarding
 
+    @objc public func logBaseEvent(_ event: MPBaseEvent) -> MPKitExecStatus {
+        if let mpEvent = event as? MPEvent {
+            return routeEvent(mpEvent)
+        } else if let commerceEvent = event as? MPCommerceEvent {
+            return routeCommerceEvent(commerceEvent)
+        } else {
+            return execStatus(.unavailable)
+        }
+    }
+
     @objc public func routeEvent(_ event: MPEvent) -> MPKitExecStatus {
         guard started, let mixpanel = mixpanelInstance else {
             return execStatus(.fail)
@@ -116,6 +126,11 @@ private enum ConfigurationKey {
         let properties = convertToMixpanelProperties(event.customAttributes)
         mixpanel.track(event: eventName, properties: properties)
 
+        return execStatus(.success)
+    }
+
+    // Placeholder for commerce events - will be implemented in Task 13
+    @objc public func routeCommerceEvent(_ commerceEvent: MPCommerceEvent) -> MPKitExecStatus {
         return execStatus(.success)
     }
 

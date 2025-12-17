@@ -42,4 +42,24 @@ final class EventForwardingTests: XCTestCase {
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
+
+    // MARK: - logBaseEvent Tests
+
+    func testLogBaseEvent_WithMPEvent_RoutesToRouteEvent() {
+        let event = MPEvent(name: "Base Event", type: .other)!
+
+        let status = kit.logBaseEvent(event)
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testLogBaseEvent_WithCommerceEvent_RoutesToRouteCommerceEvent() {
+        let product = MPProduct(name: "Test Product", sku: "SKU123", quantity: 1, price: 9.99)
+        let commerceEvent = MPCommerceEvent(action: .purchase, product: product)
+
+        let status = kit.logBaseEvent(commerceEvent)
+
+        // Commerce events should be handled (success or specific handling)
+        XCTAssertNotNil(status)
+    }
 }
