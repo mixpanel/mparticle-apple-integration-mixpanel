@@ -1,5 +1,4 @@
 import Foundation
-import UIKit
 import Mixpanel
 import mParticle_Apple_SDK
 
