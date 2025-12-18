@@ -123,7 +123,7 @@ The `MPKitMixpanel` class implements `MPKitProtocol` from mParticle-Apple-SDK. K
 4. **Attributes**: `onSetUserAttribute()`, `onRemoveUserAttribute()` - Sync user properties
 
 ### Kit Code
-Every mParticle kit has a unique identifier. Mixpanel's kit code is **10**.
+Every mParticle kit has a unique identifier. Mixpanel's kit code is **10** (defined in `MPKitMixpanel.kitCode()` in `MPKitMixpanel.swift` line 36).
 
 ### Configuration Keys
 - `token`: Mixpanel project token (required)
