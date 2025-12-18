@@ -16,13 +16,22 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Show Xcode version
+      run: xcodebuild -version
+    - name: Resolve Swift Package Dependencies
+      run: swift package resolve
     - name: Build for iOS Simulator
       run: |
-        swift build -v \
-          --sdk $(xcrun --sdk iphonesimulator --show-sdk-path) \
-          --triple arm64-apple-ios-simulator
+        xcodebuild build \
+          -scheme mParticle-Mixpanel \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+          CODE_SIGNING_ALLOWED='NO'
     - name: Run tests for iOS Simulator
       run: |
-        swift test -v \
-          --sdk $(xcrun --sdk iphonesimulator --show-sdk-path) \
-          --triple arm64-apple-ios-simulator
+        xcodebuild test \
+          -scheme mParticle-Mixpanel \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+          -enableCodeCoverage YES \
+          CODE_SIGNING_ALLOWED='NO'
