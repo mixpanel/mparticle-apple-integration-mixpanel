@@ -34,7 +34,7 @@ private enum ConfigurationKey {
 
     /// Mixpanel Kit Code assigned by mParticle
     @objc public static func kitCode() -> NSNumber {
-        return NSNumber(value: 178)
+        return NSNumber(value: 10)
     }
 
     // MARK: - MPKitProtocol Lifecycle

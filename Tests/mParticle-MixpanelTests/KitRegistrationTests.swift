@@ -3,8 +3,8 @@ import XCTest
 
 final class KitRegistrationTests: XCTestCase {
 
-    func testKitCode_Returns178() {
+    func testKitCode_Returns10() {
         let kitCode = MPKitMixpanel.kitCode()
-        XCTAssertEqual(kitCode, NSNumber(value: 178))
+        XCTAssertEqual(kitCode, NSNumber(value: 10))
     }
 }
