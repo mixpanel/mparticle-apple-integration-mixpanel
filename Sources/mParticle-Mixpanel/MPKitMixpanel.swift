@@ -254,6 +254,56 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
+    /// Increment a numeric user attribute by a given value
+    /// Maps to Mixpanel's people.increment() when useMixpanelPeople is enabled
+    @objc public func incrementUserAttribute(_ key: String, byValue value: NSNumber) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        // Only increment via People API - no super property equivalent for increment
+        if useMixpanelPeople {
+            mixpanel.people.increment(property: key, by: value.doubleValue)
+        }
+
+        return execStatus(.success)
+    }
+
+    /// Remove a user attribute by key
+    /// Maps to Mixpanel's people.unset() or unregisterSuperProperty()
+    @objc public func removeUserAttribute(_ key: String) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        if useMixpanelPeople {
+            mixpanel.people.unset(properties: [key])
+        } else {
+            mixpanel.unregisterSuperProperty(key)
+        }
+
+        return execStatus(.success)
+    }
+
+    /// Set a user attribute with an array of values
+    /// Maps to Mixpanel's people.set() or registerSuperProperties() with array value
+    @objc public func setUserAttribute(_ key: String, values: [Any]) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        // Convert array to MixpanelType array
+        let mixpanelValues = values.compactMap { $0 as? MixpanelType }
+
+        if useMixpanelPeople {
+            mixpanel.people.set(property: key, to: mixpanelValues)
+        } else {
+            mixpanel.registerSuperProperties([key: mixpanelValues])
+        }
+
+        return execStatus(.success)
+    }
+
     // MARK: - Opt Out
 
     @objc public func setOptOut(_ optOut: Bool) -> MPKitExecStatus {

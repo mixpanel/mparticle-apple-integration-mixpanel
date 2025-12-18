@@ -59,4 +59,141 @@ final class UserAttributeTests: XCTestCase {
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
     }
+
+    // MARK: - incrementUserAttribute Tests (NEW - TDD)
+
+    func testIncrementUserAttribute_WhenStarted_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "True"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.incrementUserAttribute("login_count", byValue: NSNumber(value: 1))
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testIncrementUserAttribute_WhenNotStarted_ReturnsFail() {
+        let kit = MPKitMixpanel()
+
+        let status = kit.incrementUserAttribute("login_count", byValue: NSNumber(value: 1))
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
+    }
+
+    func testIncrementUserAttribute_WithNegativeValue_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "True"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.incrementUserAttribute("credits", byValue: NSNumber(value: -5))
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testIncrementUserAttribute_WhenPeopleDisabled_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "False"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        // Should still succeed but won't call people.increment (no super property equivalent)
+        let status = kit.incrementUserAttribute("login_count", byValue: NSNumber(value: 1))
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    // MARK: - removeUserAttribute (key-based) Tests (NEW - TDD)
+
+    func testRemoveUserAttribute_WhenStarted_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "True"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.removeUserAttribute("old_attribute")
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testRemoveUserAttribute_WhenNotStarted_ReturnsFail() {
+        let kit = MPKitMixpanel()
+
+        let status = kit.removeUserAttribute("old_attribute")
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
+    }
+
+    func testRemoveUserAttribute_WhenPeopleDisabled_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "False"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        // Should call unregisterSuperProperty instead
+        let status = kit.removeUserAttribute("old_attribute")
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    // MARK: - setUserAttribute:values: (array) Tests (NEW - TDD)
+
+    func testSetUserAttributeValues_WhenStarted_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "True"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.setUserAttribute("favorite_colors", values: ["red", "blue", "green"])
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testSetUserAttributeValues_WhenNotStarted_ReturnsFail() {
+        let kit = MPKitMixpanel()
+
+        let status = kit.setUserAttribute("favorite_colors", values: ["red", "blue"])
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
+    }
+
+    func testSetUserAttributeValues_WhenPeopleDisabled_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "False"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        // Should use registerSuperProperties with array value
+        let status = kit.setUserAttribute("tags", values: ["vip", "early_adopter"])
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testSetUserAttributeValues_WithEmptyArray_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "True"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.setUserAttribute("empty_list", values: [])
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
 }
