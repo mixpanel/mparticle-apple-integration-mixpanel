@@ -6,7 +6,8 @@ let package = Package(
     name: "mParticle-Mixpanel",
     platforms: [
         .iOS(.v12),
-        .tvOS(.v12)
+        .tvOS(.v12),
+        .macOS(.v10_13)
     ],
     products: [
         .library(
