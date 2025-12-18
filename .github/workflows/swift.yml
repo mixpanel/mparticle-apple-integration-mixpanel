@@ -16,7 +16,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: swift build -v
-    - name: Run tests
-      run: swift test -v
+    - name: Build for iOS Simulator
+      run: |
+        swift build -v \
+          --sdk $(xcrun --sdk iphonesimulator --show-sdk-path) \
+          --triple arm64-apple-ios-simulator
+    - name: Run tests for iOS Simulator
+      run: |
+        swift test -v \
+          --sdk $(xcrun --sdk iphonesimulator --show-sdk-path) \
+          --triple arm64-apple-ios-simulator
