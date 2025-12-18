@@ -24,25 +24,25 @@ final class IdentityTests: XCTestCase {
     // MARK: - Identity Complete Methods
 
     func testOnLoginComplete_ReturnsSuccess() {
-        let status = kit.onLoginComplete(nil, request: nil)
+        let status = kit.onLoginComplete(.init(), request: .init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
 
     func testOnLogoutComplete_ReturnsSuccess() {
-        let status = kit.onLogoutComplete(nil, request: nil)
+        let status = kit.onLogoutComplete(.init(), request: .init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
 
     func testOnIdentifyComplete_ReturnsSuccess() {
-        let status = kit.onIdentifyComplete(nil, request: nil)
+        let status = kit.onIdentifyComplete(.init(), request: .init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
 
     func testOnModifyComplete_ReturnsSuccess() {
-        let status = kit.onModifyComplete(nil, request: nil)
+        let status = kit.onModifyComplete(.init(), request: .init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
@@ -52,7 +52,7 @@ final class IdentityTests: XCTestCase {
     func testOnLoginComplete_WhenNotStarted_ReturnsFail() {
         let uninitKit = MPKitMixpanel()
 
-        let status = uninitKit.onLoginComplete(nil, request: nil)
+        let status = uninitKit.onLoginComplete(.init(), request: .init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
     }
@@ -60,7 +60,7 @@ final class IdentityTests: XCTestCase {
     func testOnLogoutComplete_WhenNotStarted_ReturnsFail() {
         let uninitKit = MPKitMixpanel()
 
-        let status = uninitKit.onLogoutComplete(nil, request: nil)
+        let status = uninitKit.onLogoutComplete(.init(), request: .init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
     }

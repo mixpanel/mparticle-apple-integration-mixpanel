@@ -14,7 +14,7 @@ final class UserAttributeTests: XCTestCase {
         ]
         _ = kit.didFinishLaunching(withConfiguration: config)
 
-        let status = kit.onSetUserAttribute(nil)
+        let status = kit.onSetUserAttribute(.init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
@@ -27,7 +27,7 @@ final class UserAttributeTests: XCTestCase {
         ]
         _ = kit.didFinishLaunching(withConfiguration: config)
 
-        let status = kit.onSetUserAttribute(nil)
+        let status = kit.onSetUserAttribute(.init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
@@ -35,7 +35,7 @@ final class UserAttributeTests: XCTestCase {
     func testOnSetUserAttribute_WhenNotStarted_ReturnsFail() {
         let kit = MPKitMixpanel()
 
-        let status = kit.onSetUserAttribute(nil)
+        let status = kit.onSetUserAttribute(.init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
     }
@@ -47,7 +47,7 @@ final class UserAttributeTests: XCTestCase {
         let config: [AnyHashable: Any] = ["token": "test-token"]
         _ = kit.didFinishLaunching(withConfiguration: config)
 
-        let status = kit.onRemoveUserAttribute(nil)
+        let status = kit.onRemoveUserAttribute(.init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
@@ -55,7 +55,7 @@ final class UserAttributeTests: XCTestCase {
     func testOnRemoveUserAttribute_WhenNotStarted_ReturnsFail() {
         let kit = MPKitMixpanel()
 
-        let status = kit.onRemoveUserAttribute(nil)
+        let status = kit.onRemoveUserAttribute(.init())
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
     }

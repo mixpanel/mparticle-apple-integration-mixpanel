@@ -104,16 +104,17 @@ private enum ConfigurationKey {
     // MARK: - Event Forwarding
 
     @objc public func logBaseEvent(_ event: MPBaseEvent) -> MPKitExecStatus {
-        if let mpEvent = event as? MPEvent {
-            return routeEvent(mpEvent)
-        } else if let commerceEvent = event as? MPCommerceEvent {
-            return routeCommerceEvent(commerceEvent)
-        } else {
-            return execStatus(.unavailable)
+        switch event {
+        case let mpEvent as MPEvent:
+            return logEvent(mpEvent)
+        case let commerceEvent as MPCommerceEvent:
+            return logCommerceEvent(commerceEvent)
+        default:
+            return execStatus(.cannotExecute)
         }
     }
 
-    @objc public func routeEvent(_ event: MPEvent) -> MPKitExecStatus {
+    @objc public func logEvent(_ event: MPEvent) -> MPKitExecStatus {
         guard started, let mixpanel = mixpanelInstance else {
             return execStatus(.fail)
         }
@@ -148,7 +149,7 @@ private enum ConfigurationKey {
 
     // MARK: - Commerce Events
 
-    @objc public func routeCommerceEvent(_ commerceEvent: MPCommerceEvent) -> MPKitExecStatus {
+    @objc public func logCommerceEvent(_ commerceEvent: MPCommerceEvent) -> MPKitExecStatus {
         guard started, let mixpanel = mixpanelInstance else {
             return execStatus(.fail)
         }
@@ -165,12 +166,10 @@ private enum ConfigurationKey {
             status.incrementForwardCount()
         } else {
             // Expand non-purchase commerce events to regular events
-            if let expandedEvents = commerceEvent.expandedInstructions() as? [MPCommerceEventInstruction] {
+            if let expandedEvents = commerceEvent.expandedInstructions() {
                 for instruction in expandedEvents {
-                    if let event = instruction.event {
-                        _ = routeEvent(event)
-                        status.incrementForwardCount()
-                    }
+                    _ = logEvent(instruction.event)
+                    status.incrementForwardCount()
                 }
             }
         }
@@ -180,7 +179,7 @@ private enum ConfigurationKey {
 
     // MARK: - Identity Handling
 
-    @objc public func onIdentifyComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+    @objc public func onIdentifyComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         if let userId = extractUserId(from: user) {
@@ -190,7 +189,7 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
-    @objc public func onLoginComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+    @objc public func onLoginComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         if let userId = extractUserId(from: user) {
@@ -200,7 +199,7 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
-    @objc public func onLogoutComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+    @objc public func onLogoutComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         mixpanelInstance?.reset()
@@ -208,7 +207,7 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
-    @objc public func onModifyComplete(_ user: FilteredMParticleUser?, request: FilteredMPIdentityApiRequest?) -> MPKitExecStatus {
+    @objc public func onModifyComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         if let userId = extractUserId(from: user) {
@@ -220,13 +219,12 @@ private enum ConfigurationKey {
 
     // MARK: - User Attributes
 
-    @objc public func onSetUserAttribute(_ user: FilteredMParticleUser?) -> MPKitExecStatus {
+    @objc public func onSetUserAttribute(_ user: FilteredMParticleUser) -> MPKitExecStatus {
         guard started, let mixpanel = mixpanelInstance else {
             return execStatus(.fail)
         }
 
-        guard let user = user,
-              let changedAttribute = user.userAttributes.keys.first as? String,
+        guard let changedAttribute = user.userAttributes.keys.first,
               let value = user.userAttributes[changedAttribute] else {
             return execStatus(.success)
         }
@@ -246,7 +244,7 @@ private enum ConfigurationKey {
         return execStatus(.success)
     }
 
-    @objc public func onRemoveUserAttribute(_ user: FilteredMParticleUser?) -> MPKitExecStatus {
+    @objc public func onRemoveUserAttribute(_ user: FilteredMParticleUser) -> MPKitExecStatus {
         guard started else {
             return execStatus(.fail)
         }
@@ -321,5 +319,19 @@ private enum ConfigurationKey {
 
     private func execStatus(_ returnCode: MPKitReturnCode) -> MPKitExecStatus {
         return MPKitExecStatus(sdkCode: Self.kitCode(), returnCode: returnCode)
+    }
+}
+
+// MARK: - Public API for direct access
+
+extension MPKitMixpanel {
+    /// Route an MPEvent to Mixpanel (public API for tests and direct access)
+    @objc public func routeEvent(_ event: MPEvent) -> MPKitExecStatus {
+        return logEvent(event)
+    }
+
+    /// Route a commerce event to Mixpanel (public API for tests and direct access)
+    @objc public func routeCommerceEvent(_ commerceEvent: MPCommerceEvent) -> MPKitExecStatus {
+        return logCommerceEvent(commerceEvent)
     }
 }

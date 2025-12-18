@@ -11,7 +11,7 @@ let package = Package(
     products: [
         .library(
             name: "mParticle-Mixpanel",
-            targets: ["mParticle-Mixpanel"]
+            targets: ["mParticle-Mixpanel", "mParticle-MixpanelObjC"]
         ),
     ],
     dependencies: [
@@ -25,6 +25,7 @@ let package = Package(
         ),
     ],
     targets: [
+        // Main Swift implementation
         .target(
             name: "mParticle-Mixpanel",
             dependencies: [
@@ -32,6 +33,16 @@ let package = Package(
                 .product(name: "Mixpanel", package: "mixpanel-swift"),
             ],
             path: "Sources/mParticle-Mixpanel"
+        ),
+        // ObjC target for automatic kit registration via +load
+        .target(
+            name: "mParticle-MixpanelObjC",
+            dependencies: [
+                "mParticle-Mixpanel",
+                .product(name: "mParticle-Apple-SDK", package: "mparticle-apple-sdk"),
+            ],
+            path: "Sources/mParticle-MixpanelObjC",
+            publicHeadersPath: "include"
         ),
         .testTarget(
             name: "mParticle-MixpanelTests",
