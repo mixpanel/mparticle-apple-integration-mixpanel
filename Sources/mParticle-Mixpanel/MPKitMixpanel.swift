@@ -155,25 +155,71 @@ private enum ConfigurationKey {
 
         let status = MPKitExecStatus(sdkCode: Self.kitCode(), returnCode: .success)
 
-        // Handle Purchase events with People API
-        if commerceEvent.action == .purchase {
-            if useMixpanelPeople {
-                let revenue = commerceEvent.transactionAttributes?.revenue?.doubleValue ?? 0.0
-                let properties = convertToMixpanelProperties(commerceEvent.customAttributes)
-                mixpanel.people.trackCharge(amount: revenue, properties: properties)
-            }
-            status.incrementForwardCount()
-        } else {
-            // Expand non-purchase commerce events to regular events
-            if let expandedEvents = commerceEvent.expandedInstructions() {
-                for instruction in expandedEvents {
-                    _ = logEvent(instruction.event)
-                    status.incrementForwardCount()
-                }
+        // Expand all commerce events (including purchases) to regular events
+        // Note: trackCharge is deprecated by Mixpanel - commerce events should be tracked as regular events
+        if let expandedEvents = commerceEvent.expandedInstructions() {
+            for instruction in expandedEvents {
+                guard let event = instruction.event else { continue }
+
+                let properties = buildCommerceEventProperties(
+                    expandedEvent: event,
+                    commerceEvent: commerceEvent
+                )
+
+                mixpanel.track(event: event.name, properties: properties.isEmpty ? nil : properties)
+                status.incrementForwardCount()
             }
         }
 
         return status
+    }
+
+    /// Builds Mixpanel properties from expanded commerce event and original commerce event
+    /// Combines: expanded event attributes, commerce event custom attributes, and transaction attributes
+    internal func buildCommerceEventProperties(
+        expandedEvent: MPEvent,
+        commerceEvent: MPCommerceEvent
+    ) -> [String: MixpanelType] {
+        var properties: [String: MixpanelType] = [:]
+
+        // Add expanded event's custom attributes (contains product info)
+        if let eventAttrs = expandedEvent.customAttributes {
+            for (key, value) in eventAttrs {
+                if let mixpanelValue = value as? MixpanelType {
+                    properties[key] = mixpanelValue
+                }
+            }
+        }
+
+        // Add commerce event's custom attributes
+        if let commerceAttrs = commerceEvent.customAttributes {
+            for (key, value) in commerceAttrs {
+                if let mixpanelValue = value as? MixpanelType {
+                    properties[key] = mixpanelValue
+                }
+            }
+        }
+
+        // Add transaction attributes
+        if let transactionAttrs = commerceEvent.transactionAttributes {
+            if let revenue = transactionAttrs.revenue?.doubleValue {
+                properties["Revenue"] = revenue
+            }
+            if let transactionId = transactionAttrs.transactionId {
+                properties["Transaction Id"] = transactionId
+            }
+            if let tax = transactionAttrs.tax?.doubleValue {
+                properties["Tax"] = tax
+            }
+            if let shipping = transactionAttrs.shipping?.doubleValue {
+                properties["Shipping"] = shipping
+            }
+            if let couponCode = transactionAttrs.couponCode {
+                properties["Coupon Code"] = couponCode
+            }
+        }
+
+        return properties
     }
 
     // MARK: - Identity Handling
