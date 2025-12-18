@@ -96,7 +96,7 @@ MParticle.sharedInstance().logEvent(commerceEvent!)
 Access the Mixpanel SDK directly for advanced features:
 
 ```swift
-if let mixpanel = MParticle.sharedInstance().kitInstance(forKit: NSNumber(value: 178)) as? MixpanelInstance {
+if let mixpanel = MParticle.sharedInstance().kitInstance(forKit: NSNumber(value: 10)) as? MixpanelInstance {
     mixpanel.time(event: "Long Operation")
 }
 ```
