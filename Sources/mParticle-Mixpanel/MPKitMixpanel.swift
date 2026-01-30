@@ -61,6 +61,10 @@ private enum ConfigurationKey {
 
     #if os(iOS)
     private var _sessionReplayInstance: MPSessionReplayInstance?
+    /// Queued distinct ID for identity sync during async initialization
+    private var pendingDistinctId: String?
+    /// Flag indicating opt-in was requested during async initialization
+    private var pendingStartRecording: Bool = false
     #endif
 
     // MARK: - Kit Code
@@ -212,13 +216,39 @@ private enum ConfigurationKey {
             distinctId: mixpanel.distinctId,
             config: config
         ) { [weak self] result in
+            guard let self = self else { return }
             switch result {
-            case .success(let instance):
-                self?._sessionReplayInstance = instance
-            case .failure:
-                // Silent failure - Session Replay won't be available but analytics continues
-                break
+            case .success(let replayInstanceOptional):
+                guard let replayInstance = replayInstanceOptional else {
+                    NSLog("[MPKitMixpanel] Session Replay initialization returned nil instance")
+                    return
+                }
+                self._sessionReplayInstance = replayInstance
+                // Drain any pending identity updates that occurred during initialization
+                if let pendingId = self.pendingDistinctId {
+                    replayInstance.identify(distinctId: pendingId)
+                    self.pendingDistinctId = nil
+                }
+                // Drain pending opt-in start recording request
+                if self.pendingStartRecording {
+                    replayInstance.startRecording()
+                    self.pendingStartRecording = false
+                }
+            case .failure(let error):
+                // Log failure for diagnostics - analytics continues without Session Replay
+                NSLog("[MPKitMixpanel] Session Replay initialization failed: %@", error.localizedDescription)
             }
+        }
+    }
+
+    /// Syncs identity to Session Replay, queuing if initialization is still in progress
+    private func syncSessionReplayIdentity(_ distinctId: String) {
+        guard sessionReplayEnabled else { return }
+        if let instance = _sessionReplayInstance {
+            instance.identify(distinctId: distinctId)
+        } else {
+            // Queue identity update for when initialization completes
+            pendingDistinctId = distinctId
         }
     }
     #endif
@@ -353,7 +383,7 @@ private enum ConfigurationKey {
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
             #if os(iOS)
-            _sessionReplayInstance?.identify(distinctId: userId)
+            syncSessionReplayIdentity(userId)
             #endif
         }
 
@@ -366,7 +396,7 @@ private enum ConfigurationKey {
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
             #if os(iOS)
-            _sessionReplayInstance?.identify(distinctId: userId)
+            syncSessionReplayIdentity(userId)
             #endif
         }
 
@@ -390,7 +420,7 @@ private enum ConfigurationKey {
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
             #if os(iOS)
-            _sessionReplayInstance?.identify(distinctId: userId)
+            syncSessionReplayIdentity(userId)
             #endif
         }
 
@@ -496,12 +526,19 @@ private enum ConfigurationKey {
             mixpanel.optOutTracking()
             #if os(iOS)
             _sessionReplayInstance?.stopRecording()
+            // Clear any pending start recording request
+            pendingStartRecording = false
             #endif
         } else {
             mixpanel.optInTracking()
             #if os(iOS)
             if sessionReplayEnabled && autoStartRecording {
-                _sessionReplayInstance?.startRecording()
+                if let instance = _sessionReplayInstance {
+                    instance.startRecording()
+                } else {
+                    // Queue start recording for when initialization completes
+                    pendingStartRecording = true
+                }
             }
             #endif
         }
