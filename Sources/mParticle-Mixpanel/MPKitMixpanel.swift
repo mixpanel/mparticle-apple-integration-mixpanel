@@ -216,27 +216,31 @@ private enum ConfigurationKey {
             distinctId: mixpanel.distinctId,
             config: config
         ) { [weak self] result in
-            guard let self = self else { return }
-            switch result {
-            case .success(let replayInstanceOptional):
-                guard let replayInstance = replayInstanceOptional else {
-                    NSLog("[MPKitMixpanel] Session Replay initialization returned nil instance")
-                    return
+            // Dispatch to main thread to avoid data races with pendingDistinctId/pendingStartRecording
+            // which are accessed from main-thread SDK callbacks
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .success(let replayInstanceOptional):
+                    guard let replayInstance = replayInstanceOptional else {
+                        NSLog("[MPKitMixpanel] Session Replay initialization returned nil instance")
+                        return
+                    }
+                    self._sessionReplayInstance = replayInstance
+                    // Drain any pending identity updates that occurred during initialization
+                    if let pendingId = self.pendingDistinctId {
+                        replayInstance.identify(distinctId: pendingId)
+                        self.pendingDistinctId = nil
+                    }
+                    // Drain pending opt-in start recording request
+                    if self.pendingStartRecording {
+                        replayInstance.startRecording()
+                        self.pendingStartRecording = false
+                    }
+                case .failure(let error):
+                    // Log failure for diagnostics - analytics continues without Session Replay
+                    NSLog("[MPKitMixpanel] Session Replay initialization failed: %@", error.localizedDescription)
                 }
-                self._sessionReplayInstance = replayInstance
-                // Drain any pending identity updates that occurred during initialization
-                if let pendingId = self.pendingDistinctId {
-                    replayInstance.identify(distinctId: pendingId)
-                    self.pendingDistinctId = nil
-                }
-                // Drain pending opt-in start recording request
-                if self.pendingStartRecording {
-                    replayInstance.startRecording()
-                    self.pendingStartRecording = false
-                }
-            case .failure(let error):
-                // Log failure for diagnostics - analytics continues without Session Replay
-                NSLog("[MPKitMixpanel] Session Replay initialization failed: %@", error.localizedDescription)
             }
         }
     }
