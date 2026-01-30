@@ -1,6 +1,9 @@
 import Foundation
 import Mixpanel
 import mParticle_Apple_SDK
+#if os(iOS)
+import MixpanelSessionReplay
+#endif
 
 /// Configuration keys for Mixpanel Kit
 private enum ConfigurationKey {
@@ -8,6 +11,19 @@ private enum ConfigurationKey {
     static let serverURL = "serverURL"
     static let userIdentificationType = "userIdentificationType"
     static let useMixpanelPeople = "useMixpanelPeople"
+
+    // Session Replay - Essential
+    static let sessionReplayEnabled = "sessionReplayEnabled"
+    static let recordSessionsPercent = "recordSessionsPercent"
+    static let autoStartRecording = "autoStartRecording"
+    static let wifiOnly = "wifiOnly"
+    static let enableMPSessionReplayOniOS26 = "enableMPSessionReplayOniOS26"
+
+    // Session Replay - Privacy/Masking
+    static let maskImages = "maskImages"
+    static let maskText = "maskText"
+    static let maskWebViews = "maskWebViews"
+    static let maskMaps = "maskMaps"
 }
 
 /// mParticle Kit for Mixpanel analytics integration
@@ -25,9 +41,27 @@ private enum ConfigurationKey {
     private var userIdentificationType: UserIdentificationType = .customerId
     private var useMixpanelPeople: Bool = true
 
+    // MARK: - Session Replay Configuration
+
+    private var sessionReplayEnabled: Bool = false
+    private var recordSessionsPercent: Int = 100
+    private var autoStartRecording: Bool = true
+    private var wifiOnly: Bool = true
+    private var enableMPSessionReplayOniOS26: Bool = false
+
+    // Privacy/Masking (all default true for privacy-first)
+    private var maskImages: Bool = true
+    private var maskText: Bool = true
+    private var maskWebViews: Bool = true
+    private var maskMaps: Bool = true
+
     // MARK: - Mixpanel Instance
 
     private var mixpanelInstance: MixpanelInstance?
+
+    #if os(iOS)
+    private var _sessionReplayInstance: MPSessionReplayInstance?
+    #endif
 
     // MARK: - Kit Code
 
@@ -64,6 +98,9 @@ private enum ConfigurationKey {
             self.useMixpanelPeople = peopleString.lowercased() == "true"
         }
 
+        // Parse Session Replay configuration
+        parseMPSessionReplayConfiguration(configuration)
+
         // Start the kit
         startKit()
 
@@ -89,6 +126,10 @@ private enum ConfigurationKey {
 
         self.started = true
 
+        #if os(iOS)
+        initializeSessionReplayIfEnabled()
+        #endif
+
         // Post notification that kit is active
         DispatchQueue.main.async {
             let userInfo = [mParticleKitInstanceKey: Self.kitCode()]
@@ -99,6 +140,88 @@ private enum ConfigurationKey {
             )
         }
     }
+
+    private func parseMPSessionReplayConfiguration(_ configuration: [AnyHashable: Any]) {
+        // Session Replay enabled (default: false)
+        if let enabledString = configuration[ConfigurationKey.sessionReplayEnabled] as? String {
+            self.sessionReplayEnabled = enabledString.lowercased() == "true"
+        }
+
+        // Record sessions percent (default: 100, clamped to 0-100)
+        if let percentString = configuration[ConfigurationKey.recordSessionsPercent] as? String,
+           let percent = Int(percentString) {
+            self.recordSessionsPercent = max(0, min(100, percent))
+        }
+
+        // Auto start recording (default: true)
+        if let autoStartString = configuration[ConfigurationKey.autoStartRecording] as? String {
+            self.autoStartRecording = autoStartString.lowercased() == "true"
+        }
+
+        // WiFi only (default: true)
+        if let wifiOnlyString = configuration[ConfigurationKey.wifiOnly] as? String {
+            self.wifiOnly = wifiOnlyString.lowercased() == "true"
+        }
+
+        // Enable on iOS 26+ (default: false)
+        if let ios26String = configuration[ConfigurationKey.enableMPSessionReplayOniOS26] as? String {
+            self.enableMPSessionReplayOniOS26 = ios26String.lowercased() == "true"
+        }
+
+        // Privacy/Masking settings (all default: true)
+        if let maskImagesString = configuration[ConfigurationKey.maskImages] as? String {
+            self.maskImages = maskImagesString.lowercased() != "false"
+        }
+
+        if let maskTextString = configuration[ConfigurationKey.maskText] as? String {
+            self.maskText = maskTextString.lowercased() != "false"
+        }
+
+        if let maskWebViewsString = configuration[ConfigurationKey.maskWebViews] as? String {
+            self.maskWebViews = maskWebViewsString.lowercased() != "false"
+        }
+
+        if let maskMapsString = configuration[ConfigurationKey.maskMaps] as? String {
+            self.maskMaps = maskMapsString.lowercased() != "false"
+        }
+    }
+
+    #if os(iOS)
+    private func initializeSessionReplayIfEnabled() {
+        guard sessionReplayEnabled,
+              let mixpanel = mixpanelInstance else { return }
+
+        // Build autoMaskedViews set from config
+        var autoMaskedViews: Set<MPAutoMaskedViews> = []
+        if maskImages { autoMaskedViews.insert(.image) }
+        if maskText { autoMaskedViews.insert(.text) }
+        if maskWebViews { autoMaskedViews.insert(.web) }
+        if maskMaps { autoMaskedViews.insert(.map) }
+
+        let config = MPSessionReplayConfig(
+            wifiOnly: wifiOnly,
+            autoMaskedViews: autoMaskedViews,
+            autoStartRecording: autoStartRecording,
+            recordingSessionsPercent: Double(recordSessionsPercent),
+            enableSessionReplayOniOS26AndLater: enableMPSessionReplayOniOS26
+        )
+
+        // Initialize Session Replay asynchronously
+        MPSessionReplay.initialize(
+            token: mixpanel.apiToken,
+            distinctId: mixpanel.distinctId,
+            config: config
+        ) { [weak self] result in
+            switch result {
+            case .success(let instance):
+                self?._sessionReplayInstance = instance
+            case .failure:
+                // Silent failure - Session Replay won't be available but analytics continues
+                break
+            }
+        }
+    }
+    #endif
 
     // MARK: - Event Forwarding
 
@@ -229,6 +352,9 @@ private enum ConfigurationKey {
 
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
+            #if os(iOS)
+            _sessionReplayInstance?.identify(distinctId: userId)
+            #endif
         }
 
         return execStatus(.success)
@@ -239,6 +365,9 @@ private enum ConfigurationKey {
 
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
+            #if os(iOS)
+            _sessionReplayInstance?.identify(distinctId: userId)
+            #endif
         }
 
         return execStatus(.success)
@@ -248,6 +377,9 @@ private enum ConfigurationKey {
         guard started else { return execStatus(.fail) }
 
         mixpanelInstance?.reset()
+        #if os(iOS)
+        _sessionReplayInstance?.stopRecording()
+        #endif
 
         return execStatus(.success)
     }
@@ -257,6 +389,9 @@ private enum ConfigurationKey {
 
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
+            #if os(iOS)
+            _sessionReplayInstance?.identify(distinctId: userId)
+            #endif
         }
 
         return execStatus(.success)
@@ -359,8 +494,16 @@ private enum ConfigurationKey {
 
         if optOut {
             mixpanel.optOutTracking()
+            #if os(iOS)
+            _sessionReplayInstance?.stopRecording()
+            #endif
         } else {
             mixpanel.optInTracking()
+            #if os(iOS)
+            if sessionReplayEnabled && autoStartRecording {
+                _sessionReplayInstance?.startRecording()
+            }
+            #endif
         }
 
         return execStatus(.success)
@@ -409,6 +552,15 @@ private enum ConfigurationKey {
         guard started else { return nil }
         return mixpanelInstance
     }
+
+    #if os(iOS)
+    /// Access to the underlying Session Replay instance for advanced control.
+    /// Returns nil if Session Replay is not enabled or not initialized.
+    @objc public var sessionReplayProviderInstance: Any? {
+        guard started, sessionReplayEnabled else { return nil }
+        return _sessionReplayInstance
+    }
+    #endif
 
     // MARK: - Helpers
 
