@@ -26,11 +26,11 @@ final class InitializationTests: XCTestCase {
         XCTAssertFalse(kit.started)
     }
 
-    func testDidFinishLaunching_ParsesServerURL() {
+    func testDidFinishLaunching_ParsesBaseUrl() {
         let kit = MPKitMixpanel()
         let config: [AnyHashable: Any] = [
             "token": "test-token",
-            "serverURL": "https://custom.mixpanel.com"
+            "baseUrl": "https://api-eu.mixpanel.com"
         ]
 
         let status = kit.didFinishLaunching(withConfiguration: config)

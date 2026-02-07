@@ -42,7 +42,7 @@ Configure the Mixpanel integration in the [mParticle dashboard](https://app.mpar
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `token` | Your Mixpanel project token | (required) |
-| `serverURL` | Custom Mixpanel API endpoint | Mixpanel default |
+| `baseUrl` | Mixpanel Target Server endpoint (US or EU) | Mixpanel default (US) |
 | `userIdentificationType` | Identity type for Mixpanel user ID | CustomerId |
 | `useMixpanelPeople` | Use People API for user attributes | true |
 

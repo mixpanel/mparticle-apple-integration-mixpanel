@@ -8,7 +8,7 @@ import MixpanelSessionReplay
 /// Configuration keys for Mixpanel Kit
 private enum ConfigurationKey {
     static let token = "token"
-    static let serverURL = "serverURL"
+    static let baseUrl = "baseUrl"
     static let userIdentificationType = "userIdentificationType"
     static let useMixpanelPeople = "useMixpanelPeople"
 
@@ -86,9 +86,9 @@ private enum ConfigurationKey {
         }
         self.token = token
 
-        // Parse optional server URL
-        if let serverURL = configuration[ConfigurationKey.serverURL] as? String, !serverURL.isEmpty {
-            self.serverURL = serverURL
+        // Parse optional base URL (Mixpanel Target Server endpoint)
+        if let baseUrl = configuration[ConfigurationKey.baseUrl] as? String, !baseUrl.isEmpty {
+            self.serverURL = baseUrl
         }
 
         // Parse user identification type (default: CustomerId)
