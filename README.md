@@ -39,26 +39,26 @@ Configure the Mixpanel integration in the [mParticle dashboard](https://app.mpar
 
 ### Core Settings
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `token` | Your Mixpanel project token | (required) |
-| `baseUrl` | Mixpanel Target Server endpoint (US or EU) | Mixpanel default (US) |
-| `userIdentificationType` | Identity type for Mixpanel user ID | CustomerId |
-| `useMixpanelPeople` | Use People API for user attributes | true |
+| Setting                  | Description                                | Default               |
+| ------------------------ | ------------------------------------------ | --------------------- |
+| `token`                  | Your Mixpanel project token                | (required)            |
+| `baseUrl`                | Mixpanel Target Server endpoint (US or EU) | Mixpanel default (US) |
+| `userIdentificationType` | Identity type for Mixpanel user ID         | CustomerId            |
+| `useMixpanelPeople`      | Use People API for user attributes         | true                  |
 
 ### Session Replay Settings (iOS only)
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `sessionReplayEnabled` | bool | false | Enable Session Replay |
-| `recordSessionsPercent` | int (0-100) | 100 | Sampling rate for sessions |
-| `autoStartRecording` | bool | true | Auto-start recording on launch |
-| `wifiOnly` | bool | true | Upload recordings only on WiFi |
-| `enableMPSessionReplayOniOS26` | bool | false | Force enable on iOS 26+ |
-| `maskImages` | bool | true | Mask UIImageView content |
-| `maskText` | bool | true | Mask UILabel/UITextField content |
-| `maskWebViews` | bool | true | Mask WKWebView content |
-| `maskMaps` | bool | true | Mask MKMapView content |
+| Setting                              | Type        | Default | Description                      |
+| ------------------------------------ | ----------- | ------- | -------------------------------- |
+| `sessionReplayEnabled`               | bool        | false   | Enable Session Replay            |
+| `recordSessionsPercent`              | int (0-100) | 100     | Sampling rate for sessions       |
+| `autoStartRecording`                 | bool        | true    | Auto-start recording on launch   |
+| `wifiOnly`                           | bool        | true    | Upload recordings only on WiFi   |
+| `enableMixpanelSessionReplayOniOS26` | bool        | false   | Force enable on iOS 26+          |
+| `maskImages`                         | bool        | true    | Mask UIImageView content         |
+| `maskText`                           | bool        | true    | Mask UILabel/UITextField content |
+| `maskWebViews`                       | bool        | true    | Mask WKWebView content           |
+| `maskMaps`                           | bool        | true    | Mask MKMapView content           |
 
 ### User Identification Types
 
