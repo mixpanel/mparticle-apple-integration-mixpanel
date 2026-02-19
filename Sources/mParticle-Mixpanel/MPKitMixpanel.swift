@@ -442,11 +442,9 @@ private enum ConfigurationKey {
         "$LastName": "$last_name",
         "$Email": "$email",
         "$Mobile": "$phone",
-        "$MPUserMobile": "$phone",
         "$Country": "$country_code",
-        "$Zip": "$zip",
         "$City": "$city",
-        "$State": "$region",
+        "$State": "$region"
     ]
 
     /// Returns the Mixpanel profile key for a given mParticle reserved attribute key

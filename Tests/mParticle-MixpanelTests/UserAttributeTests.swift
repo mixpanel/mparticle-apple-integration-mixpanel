@@ -241,9 +241,7 @@ final class UserAttributeTests: XCTestCase {
         XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$LastName"), "$last_name")
         XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Email"), "$email")
         XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Mobile"), "$phone")
-        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$MPUserMobile"), "$phone")
         XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Country"), "$country_code")
-        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Zip"), "$zip")
         XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$City"), "$city")
         XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$State"), "$region")
     }
