@@ -269,20 +269,18 @@ private enum ConfigurationKey {
             return execStatus(.fail)
         }
 
-        guard let changedAttribute = user.userAttributes.keys.first,
-              let value = user.userAttributes[changedAttribute] else {
-            return execStatus(.success)
-        }
-
-        if useMixpanelPeople {
-            // Use People API
-            if let mixpanelValue = value as? MixpanelType {
-                mixpanel.people.set(property: changedAttribute, to: mixpanelValue)
-            }
-        } else {
-            // Use Super Properties
-            if let mixpanelValue = value as? MixpanelType {
-                mixpanel.registerSuperProperties([changedAttribute: mixpanelValue])
+        for (key, value) in user.userAttributes {
+            let mixpanelKey = Self.mixpanelProfileKey(for: key)
+            if useMixpanelPeople {
+                // Use People API
+                if let mixpanelValue = value as? MixpanelType {
+                    mixpanel.people.set(property: mixpanelKey, to: mixpanelValue)
+                }
+            } else {
+                // Use Super Properties
+                if let mixpanelValue = value as? MixpanelType {
+                    mixpanel.registerSuperProperties([mixpanelKey: mixpanelValue])
+                }
             }
         }
 
@@ -309,7 +307,7 @@ private enum ConfigurationKey {
 
         // Only increment via People API - no super property equivalent for increment
         if useMixpanelPeople {
-            mixpanel.people.increment(property: key, by: value.doubleValue)
+            mixpanel.people.increment(property: Self.mixpanelProfileKey(for: key), by: value.doubleValue)
         }
 
         return execStatus(.success)
@@ -322,10 +320,31 @@ private enum ConfigurationKey {
             return execStatus(.fail)
         }
 
+        let mixpanelKey = Self.mixpanelProfileKey(for: key)
         if useMixpanelPeople {
-            mixpanel.people.unset(properties: [key])
+            mixpanel.people.unset(properties: [mixpanelKey])
         } else {
-            mixpanel.unregisterSuperProperty(key)
+            mixpanel.unregisterSuperProperty(mixpanelKey)
+        }
+
+        return execStatus(.success)
+    }
+
+    /// Set a user attribute with a single value, uses reserved-attribute mapping.
+    @objc public func setUserAttribute(_ key: String, value: Any) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        let mixpanelKey = Self.mixpanelProfileKey(for: key)
+        guard let mixpanelValue = value as? MixpanelType else {
+            return execStatus(.success)
+        }
+
+        if useMixpanelPeople {
+            mixpanel.people.set(property: mixpanelKey, to: mixpanelValue)
+        } else {
+            mixpanel.registerSuperProperties([mixpanelKey: mixpanelValue])
         }
 
         return execStatus(.success)
@@ -338,13 +357,13 @@ private enum ConfigurationKey {
             return execStatus(.fail)
         }
 
-        // Convert array to MixpanelType array
+        let mixpanelKey = Self.mixpanelProfileKey(for: key)
         let mixpanelValues = values.compactMap { $0 as? MixpanelType }
 
         if useMixpanelPeople {
-            mixpanel.people.set(property: key, to: mixpanelValues)
+            mixpanel.people.set(property: mixpanelKey, to: mixpanelValues)
         } else {
-            mixpanel.registerSuperProperties([key: mixpanelValues])
+            mixpanel.registerSuperProperties([mixpanelKey: mixpanelValues])
         }
 
         return execStatus(.success)
@@ -414,6 +433,25 @@ private enum ConfigurationKey {
 
     private func execStatus(_ returnCode: MPKitReturnCode) -> MPKitExecStatus {
         return MPKitExecStatus(sdkCode: Self.kitCode(), returnCode: returnCode)
+    }
+
+    /// mParticle reserved keys mapped to Mixpanel reserved user attribute keys.
+    /// https://docs.mixpanel.com/docs/data-structure/property-reference/reserved-properties
+    private static let reservedKeyToMixpanel: [String: String] = [
+        "$FirstName": "$first_name",
+        "$LastName": "$last_name",
+        "$Email": "$email",
+        "$Mobile": "$phone",
+        "$MPUserMobile": "$phone",
+        "$Country": "$country_code",
+        "$Zip": "$zip",
+        "$City": "$city",
+        "$State": "$region",
+    ]
+
+    /// Returns the Mixpanel profile key for a given mParticle reserved attribute key
+    internal static func mixpanelProfileKey(for key: String) -> String {
+        return reservedKeyToMixpanel[key] ?? key
     }
 }
 
