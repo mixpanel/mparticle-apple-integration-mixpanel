@@ -196,4 +196,60 @@ final class UserAttributeTests: XCTestCase {
 
         XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
     }
+
+    // MARK: - setUserAttribute(key:value:) Tests
+
+    func testSetUserAttribute_WhenStarted_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "True"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        let status = kit.setUserAttribute("custom_key", value: "custom_value")
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    func testSetUserAttribute_WhenNotStarted_ReturnsFail() {
+        let kit = MPKitMixpanel()
+
+        let status = kit.setUserAttribute("key", value: "value")
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.fail)
+    }
+
+    func testSetUserAttribute_WithNonMixpanelTypeValue_ReturnsSuccess() {
+        let kit = MPKitMixpanel()
+        let config: [AnyHashable: Any] = [
+            "token": "test-token",
+            "useMixpanelPeople": "True"
+        ]
+        _ = kit.didFinishLaunching(withConfiguration: config)
+
+        struct CustomNonMixpanelType { let id: Int }
+        let status = kit.setUserAttribute("customKey", value: CustomNonMixpanelType(id: 42))
+
+        XCTAssertEqual(status.returnCode, MPKitReturnCode.success)
+    }
+
+    // MARK: - mixpanelProfileKey Tests
+
+    func testMixpanelProfileKey_MapsReservedKeys() {
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$FirstName"), "$first_name")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$LastName"), "$last_name")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Email"), "$email")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Mobile"), "$phone")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$MPUserMobile"), "$phone")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Country"), "$country_code")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$Zip"), "$zip")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$City"), "$city")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$State"), "$region")
+    }
+
+    func testMixpanelProfileKey_PassesThroughUnmappedKeys() {
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "custom_key"), "custom_key")
+        XCTAssertEqual(MPKitMixpanel.mixpanelProfileKey(for: "$CustomAttribute"), "$CustomAttribute")
+    }
 }
