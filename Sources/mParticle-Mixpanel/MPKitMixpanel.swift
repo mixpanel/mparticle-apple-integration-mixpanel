@@ -458,36 +458,16 @@ private enum ConfigurationKey {
             return execStatus(.fail)
         }
 
-<<<<<<< fix/add-reserved-user-attributes
         for (key, value) in user.userAttributes {
             let mixpanelKey = Self.mixpanelProfileKey(for: key)
             if useMixpanelPeople {
-                // Use People API
                 if let mixpanelValue = value as? MixpanelType {
                     mixpanel.people.set(property: mixpanelKey, to: mixpanelValue)
                 }
             } else {
-                // Use Super Properties
                 if let mixpanelValue = value as? MixpanelType {
                     mixpanel.registerSuperProperties([mixpanelKey: mixpanelValue])
                 }
-=======
-        guard let changedAttribute = user.userAttributes.keys.first,
-            let value = user.userAttributes[changedAttribute]
-        else {
-            return execStatus(.success)
-        }
-
-        if useMixpanelPeople {
-            // Use People API
-            if let mixpanelValue = value as? MixpanelType {
-                mixpanel.people.set(property: changedAttribute, to: mixpanelValue)
-            }
-        } else {
-            // Use Super Properties
-            if let mixpanelValue = value as? MixpanelType {
-                mixpanel.registerSuperProperties([changedAttribute: mixpanelValue])
->>>>>>> feature/session-replay-integration
             }
         }
 
