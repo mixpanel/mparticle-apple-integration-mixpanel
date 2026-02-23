@@ -40,7 +40,7 @@ Configure the Mixpanel integration in the [mParticle dashboard](https://app.mpar
 ### Core Settings
 
 | Setting                  | Description                                | Default               |
-| ------------------------ | ------------------------------------------ | --------------------- |
+| :----------------------- | :----------------------------------------- | :-------------------- |
 | `token`                  | Your Mixpanel project token                | (required)            |
 | `baseUrl`                | Mixpanel Target Server endpoint (US or EU) | Mixpanel default (US) |
 | `userIdentificationType` | Identity type for Mixpanel user ID         | CustomerId            |
@@ -48,8 +48,8 @@ Configure the Mixpanel integration in the [mParticle dashboard](https://app.mpar
 
 ### Session Replay Settings (iOS only)
 
-| Setting                              | Type        | Default | Description                      |
-| ------------------------------------ | ----------- | ------- | -------------------------------- |
+| Setting                             | Type        | Default | Description                      |
+| :---------------------------------- | :---------- | :------ | :------------------------------- |
 | `sessionReplayEnabled`               | bool        | false   | Enable Session Replay            |
 | `recordSessionsPercent`              | int (0-100) | 100     | Sampling rate for sessions       |
 | `autoStartRecording`                 | bool        | true    | Auto-start recording on launch   |
@@ -142,7 +142,7 @@ For advanced control, access the Session Replay provider directly:
 import MixpanelSessionReplay
 
 if let kit = MParticle.sharedInstance().kitInstance(forKit: NSNumber(value: 10)) as? MPKitMixpanel,
-   let sessionReplay = kit.sessionReplayProviderInstance {
+   let sessionReplay = kit.sessionReplayProviderInstance as? MPSessionReplayInstance {
     // Manual control
     sessionReplay.startRecording()
     sessionReplay.stopRecording()

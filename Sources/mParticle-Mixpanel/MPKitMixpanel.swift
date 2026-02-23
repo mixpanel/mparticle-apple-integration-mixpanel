@@ -44,17 +44,17 @@ private enum ConfigurationKey {
 
     // MARK: - Session Replay Configuration
 
-    private var sessionReplayEnabled: Bool = false
-    private var recordSessionsPercent: Int = 100
-    private var autoStartRecording: Bool = true
-    private var wifiOnly: Bool = true
-    private var enableMixpanelSessionReplayOniOS26: Bool = false
+    internal private(set) var sessionReplayEnabled: Bool = false
+    internal private(set) var recordSessionsPercent: Int = 100
+    internal private(set) var autoStartRecording: Bool = true
+    internal private(set) var wifiOnly: Bool = true
+    internal private(set) var enableMixpanelSessionReplayOniOS26: Bool = false
 
     // Privacy/Masking (all default true for privacy-first)
-    private var maskImages: Bool = true
-    private var maskText: Bool = true
-    private var maskWebViews: Bool = true
-    private var maskMaps: Bool = true
+    internal private(set) var maskImages: Bool = true
+    internal private(set) var maskText: Bool = true
+    internal private(set) var maskWebViews: Bool = true
+    internal private(set) var maskMaps: Bool = true
 
     // MARK: - Mixpanel Instance
 
@@ -66,6 +66,10 @@ private enum ConfigurationKey {
         private var pendingDistinctId: String?
         /// Flag indicating opt-in was requested during async initialization
         private var pendingStartRecording: Bool = false
+        /// Tracks whether recording was manually stopped by the user before opt-out
+        private var wasManuallyStoppedBeforeOptOut: Bool = false
+        /// Serial queue protecting Session Replay pending state from concurrent access
+        private let sessionReplayQueue = DispatchQueue(label: "com.mparticle.mixpanel.sessionreplay")
     #endif
 
     // MARK: - Kit Code
@@ -164,12 +168,12 @@ private enum ConfigurationKey {
 
         // Auto start recording (default: true)
         if let autoStartString = configuration[ConfigurationKey.autoStartRecording] as? String {
-            self.autoStartRecording = autoStartString.lowercased() == "true"
+            self.autoStartRecording = autoStartString.lowercased() != "false"
         }
 
         // WiFi only (default: true)
         if let wifiOnlyString = configuration[ConfigurationKey.wifiOnly] as? String {
-            self.wifiOnly = wifiOnlyString.lowercased() == "true"
+            self.wifiOnly = wifiOnlyString.lowercased() != "false"
         }
 
         // Enable on iOS 26+ (default: false)
@@ -224,10 +228,8 @@ private enum ConfigurationKey {
                 distinctId: mixpanel.distinctId,
                 config: config
             ) { [weak self] result in
-                // Dispatch to main thread to avoid data races with pendingDistinctId/pendingStartRecording
-                // which are accessed from main-thread SDK callbacks
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
+                guard let self = self else { return }
+                self.sessionReplayQueue.async {
                     switch result {
                     case .success(let replayInstanceOptional):
                         guard let replayInstance = replayInstanceOptional else {
@@ -248,7 +250,6 @@ private enum ConfigurationKey {
                             self.pendingStartRecording = false
                         }
                     case .failure(let error):
-                        // Log failure for diagnostics - analytics continues without Session Replay
                         NSLog(
                             "[MPKitMixpanel] Session Replay initialization failed: %@",
                             error.localizedDescription)
@@ -260,11 +261,14 @@ private enum ConfigurationKey {
         /// Syncs identity to Session Replay, queuing if initialization is still in progress
         private func syncSessionReplayIdentity(_ distinctId: String) {
             guard sessionReplayEnabled else { return }
-            if let instance = _sessionReplayInstance {
-                instance.identify(distinctId: distinctId)
-            } else {
-                // Queue identity update for when initialization completes
-                pendingDistinctId = distinctId
+            sessionReplayQueue.async { [weak self] in
+                guard let self = self else { return }
+                if let instance = self._sessionReplayInstance {
+                    instance.identify(distinctId: distinctId)
+                } else {
+                    // Queue identity update for when initialization completes
+                    self.pendingDistinctId = distinctId
+                }
             }
         }
     #endif
@@ -430,7 +434,13 @@ private enum ConfigurationKey {
 
         mixpanelInstance?.reset()
         #if os(iOS)
-            _sessionReplayInstance?.stopRecording()
+            sessionReplayQueue.async { [weak self] in
+                guard let self = self else { return }
+                self._sessionReplayInstance?.stopRecording()
+                // Clear pending state to prevent stale identity/recording after async init completes
+                self.pendingDistinctId = nil
+                self.pendingStartRecording = false
+            }
         #endif
 
         return execStatus(.success)
@@ -568,21 +578,29 @@ private enum ConfigurationKey {
         if optOut {
             mixpanel.optOutTracking()
             #if os(iOS)
-                _sessionReplayInstance?.stopRecording()
-                // Clear any pending start recording request
-                pendingStartRecording = false
+                sessionReplayQueue.async { [weak self] in
+                    guard let self = self else { return }
+                    self._sessionReplayInstance?.stopRecording()
+                    // Clear all pending state to prevent actions contradicting opt-out intent
+                    self.pendingStartRecording = false
+                    self.pendingDistinctId = nil
+                }
             #endif
         } else {
             mixpanel.optInTracking()
             #if os(iOS)
-                if sessionReplayEnabled && autoStartRecording {
-                    if let instance = _sessionReplayInstance {
-                        instance.startRecording()
-                    } else {
-                        // Queue start recording for when initialization completes
-                        pendingStartRecording = true
+                if sessionReplayEnabled && autoStartRecording && !wasManuallyStoppedBeforeOptOut {
+                    sessionReplayQueue.async { [weak self] in
+                        guard let self = self else { return }
+                        if let instance = self._sessionReplayInstance {
+                            instance.startRecording()
+                        } else {
+                            // Queue start recording for when initialization completes
+                            self.pendingStartRecording = true
+                        }
                     }
                 }
+                wasManuallyStoppedBeforeOptOut = false
             #endif
         }
 
