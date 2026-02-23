@@ -127,7 +127,7 @@ Every mParticle kit has a unique identifier. Mixpanel's kit code is **10** (defi
 
 ### Configuration Keys
 - `token`: Mixpanel project token (required)
-- `serverURL`: Custom Mixpanel API endpoint (optional)
+- `baseUrl`: Mixpanel Target Server endpoint - US or EU (optional)
 - `userIdentificationType`: Maps mParticle identity to Mixpanel distinct_id (CustomerId, MPID, Other, etc.)
 - `useMixpanelPeople`: Enable Mixpanel People API for user attributes (default: true)
 
