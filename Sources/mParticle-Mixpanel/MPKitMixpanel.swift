@@ -421,6 +421,17 @@ private enum ConfigurationKey {
             mixpanelInstance?.identify(distinctId: userId)
             #if os(iOS)
                 syncSessionReplayIdentity(userId)
+                // Restart recording for the new logged-in user if auto-start is enabled
+                if sessionReplayEnabled && autoStartRecording {
+                    sessionReplayQueue.async { [weak self] in
+                        guard let self = self else { return }
+                        if let instance = self._sessionReplayInstance {
+                            instance.startRecording()
+                        } else {
+                            self.pendingStartRecording = true
+                        }
+                    }
+                }
             #endif
         }
 
@@ -580,6 +591,11 @@ private enum ConfigurationKey {
             #if os(iOS)
                 sessionReplayQueue.async { [weak self] in
                     guard let self = self else { return }
+                    // If session replay is not currently recording, the user manually stopped it;
+                    // preserve that intent so opt-in won't auto-restart recording
+                    if let instance = self._sessionReplayInstance, !instance.isRecording {
+                        self.wasManuallyStoppedBeforeOptOut = true
+                    }
                     self._sessionReplayInstance?.stopRecording()
                     // Clear all pending state to prevent actions contradicting opt-out intent
                     self.pendingStartRecording = false
@@ -590,12 +606,16 @@ private enum ConfigurationKey {
             mixpanel.optInTracking()
             #if os(iOS)
                 if sessionReplayEnabled && autoStartRecording && !wasManuallyStoppedBeforeOptOut {
+                    let currentDistinctId = mixpanel.distinctId
                     sessionReplayQueue.async { [weak self] in
                         guard let self = self else { return }
                         if let instance = self._sessionReplayInstance {
+                            // Sync identity before resuming — distinctId may have changed while opted out
+                            instance.identify(distinctId: currentDistinctId)
                             instance.startRecording()
                         } else {
-                            // Queue start recording for when initialization completes
+                            // Queue identity sync and start recording for when initialization completes
+                            self.pendingDistinctId = currentDistinctId
                             self.pendingStartRecording = true
                         }
                     }
