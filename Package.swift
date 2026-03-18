@@ -5,8 +5,8 @@ import PackageDescription
 let package = Package(
     name: "mParticle-Mixpanel",
     platforms: [
-        .iOS(.v12),
-        .tvOS(.v12)
+        .iOS(.v13),
+        .tvOS(.v13)
     ],
     products: [
         .library(
@@ -23,6 +23,10 @@ let package = Package(
             url: "https://github.com/mixpanel/mixpanel-swift",
             .upToNextMajor(from: "4.0.0")
         ),
+        .package(
+            url: "https://github.com/mixpanel/mixpanel-ios-session-replay-package",
+            .upToNextMajor(from: "1.0.0")
+        ),
     ],
     targets: [
         // Main Swift implementation
@@ -31,6 +35,11 @@ let package = Package(
             dependencies: [
                 .product(name: "mParticle-Apple-SDK", package: "mparticle-apple-sdk"),
                 .product(name: "Mixpanel", package: "mixpanel-swift"),
+                .product(
+                    name: "MixpanelSessionReplay",
+                    package: "mixpanel-ios-session-replay-package",
+                    condition: .when(platforms: [.iOS])
+                ),
             ],
             path: "Sources/mParticle-Mixpanel"
         ),

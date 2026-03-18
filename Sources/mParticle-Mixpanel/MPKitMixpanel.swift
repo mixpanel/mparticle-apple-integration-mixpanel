@@ -2,12 +2,29 @@ import Foundation
 import Mixpanel
 import mParticle_Apple_SDK
 
+#if os(iOS)
+    import MixpanelSessionReplay
+#endif
+
 /// Configuration keys for Mixpanel Kit
 private enum ConfigurationKey {
     static let token = "token"
-    static let serverURL = "serverURL"
+    static let baseUrl = "baseUrl"
     static let userIdentificationType = "userIdentificationType"
     static let useMixpanelPeople = "useMixpanelPeople"
+
+    // Session Replay - Essential
+    static let sessionReplayEnabled = "sessionReplayEnabled"
+    static let recordSessionsPercent = "recordSessionsPercent"
+    static let autoStartRecording = "autoStartRecording"
+    static let wifiOnly = "wifiOnly"
+    static let enableMixpanelSessionReplayOniOS26 = "enableMixpanelSessionReplayOniOS26"
+
+    // Session Replay - Privacy/Masking
+    static let maskImages = "maskImages"
+    static let maskText = "maskText"
+    static let maskWebViews = "maskWebViews"
+    static let maskMaps = "maskMaps"
 }
 
 /// mParticle Kit for Mixpanel analytics integration
@@ -25,9 +42,35 @@ private enum ConfigurationKey {
     private var userIdentificationType: UserIdentificationType = .customerId
     private var useMixpanelPeople: Bool = true
 
+    // MARK: - Session Replay Configuration
+
+    internal private(set) var sessionReplayEnabled: Bool = false
+    internal private(set) var recordSessionsPercent: Int = 100
+    internal private(set) var autoStartRecording: Bool = true
+    internal private(set) var wifiOnly: Bool = true
+    internal private(set) var enableMixpanelSessionReplayOniOS26: Bool = false
+
+    // Privacy/Masking (all default true for privacy-first)
+    internal private(set) var maskImages: Bool = true
+    internal private(set) var maskText: Bool = true
+    internal private(set) var maskWebViews: Bool = true
+    internal private(set) var maskMaps: Bool = true
+
     // MARK: - Mixpanel Instance
 
     private var mixpanelInstance: MixpanelInstance?
+
+    #if os(iOS)
+        private var _sessionReplayInstance: MPSessionReplayInstance?
+        /// Queued distinct ID for identity sync during async initialization
+        private var pendingDistinctId: String?
+        /// Flag indicating opt-in was requested during async initialization
+        private var pendingStartRecording: Bool = false
+        /// Tracks whether recording was manually stopped by the user before opt-out
+        private var wasManuallyStoppedBeforeOptOut: Bool = false
+        /// Serial queue protecting Session Replay pending state from concurrent access
+        private let sessionReplayQueue = DispatchQueue(label: "com.mparticle.mixpanel.sessionreplay")
+    #endif
 
     // MARK: - Kit Code
 
@@ -38,7 +81,9 @@ private enum ConfigurationKey {
 
     // MARK: - MPKitProtocol Lifecycle
 
-    @objc public func didFinishLaunching(withConfiguration configuration: [AnyHashable: Any]) -> MPKitExecStatus {
+    @objc public func didFinishLaunching(withConfiguration configuration: [AnyHashable: Any])
+        -> MPKitExecStatus
+    {
         // Store configuration
         self.configuration = configuration
 
@@ -48,14 +93,15 @@ private enum ConfigurationKey {
         }
         self.token = token
 
-        // Parse optional server URL
-        if let serverURL = configuration[ConfigurationKey.serverURL] as? String, !serverURL.isEmpty {
-            self.serverURL = serverURL
+        // Parse optional base URL (Mixpanel Target Server endpoint)
+        if let baseUrl = configuration[ConfigurationKey.baseUrl] as? String, !baseUrl.isEmpty {
+            self.serverURL = baseUrl
         }
 
         // Parse user identification type (default: CustomerId)
         if let typeString = configuration[ConfigurationKey.userIdentificationType] as? String,
-           let type = UserIdentificationType(rawValue: typeString) {
+            let type = UserIdentificationType(rawValue: typeString)
+        {
             self.userIdentificationType = type
         }
 
@@ -63,6 +109,9 @@ private enum ConfigurationKey {
         if let peopleString = configuration[ConfigurationKey.useMixpanelPeople] as? String {
             self.useMixpanelPeople = peopleString.lowercased() == "true"
         }
+
+        // Parse Session Replay configuration
+        parseMPSessionReplayConfiguration(configuration)
 
         // Start the kit
         startKit()
@@ -89,6 +138,10 @@ private enum ConfigurationKey {
 
         self.started = true
 
+        #if os(iOS)
+            initializeSessionReplayIfEnabled()
+        #endif
+
         // Post notification that kit is active
         DispatchQueue.main.async {
             let userInfo = [mParticleKitInstanceKey: Self.kitCode()]
@@ -99,6 +152,126 @@ private enum ConfigurationKey {
             )
         }
     }
+
+    private func parseMPSessionReplayConfiguration(_ configuration: [AnyHashable: Any]) {
+        // Session Replay enabled (default: false)
+        if let enabledString = configuration[ConfigurationKey.sessionReplayEnabled] as? String {
+            self.sessionReplayEnabled = enabledString.lowercased() == "true"
+        }
+
+        // Record sessions percent (default: 100, clamped to 0-100)
+        if let percentString = configuration[ConfigurationKey.recordSessionsPercent] as? String,
+            let percent = Int(percentString)
+        {
+            self.recordSessionsPercent = max(0, min(100, percent))
+        }
+
+        // Auto start recording (default: true)
+        if let autoStartString = configuration[ConfigurationKey.autoStartRecording] as? String {
+            self.autoStartRecording = autoStartString.lowercased() != "false"
+        }
+
+        // WiFi only (default: true)
+        if let wifiOnlyString = configuration[ConfigurationKey.wifiOnly] as? String {
+            self.wifiOnly = wifiOnlyString.lowercased() != "false"
+        }
+
+        // Enable on iOS 26+ (default: false)
+        if let ios26String = configuration[ConfigurationKey.enableMixpanelSessionReplayOniOS26]
+            as? String
+        {
+            self.enableMixpanelSessionReplayOniOS26 = ios26String.lowercased() == "true"
+        }
+
+        // Privacy/Masking settings (all default: true)
+        if let maskImagesString = configuration[ConfigurationKey.maskImages] as? String {
+            self.maskImages = maskImagesString.lowercased() != "false"
+        }
+
+        if let maskTextString = configuration[ConfigurationKey.maskText] as? String {
+            self.maskText = maskTextString.lowercased() != "false"
+        }
+
+        if let maskWebViewsString = configuration[ConfigurationKey.maskWebViews] as? String {
+            self.maskWebViews = maskWebViewsString.lowercased() != "false"
+        }
+
+        if let maskMapsString = configuration[ConfigurationKey.maskMaps] as? String {
+            self.maskMaps = maskMapsString.lowercased() != "false"
+        }
+    }
+
+    #if os(iOS)
+        private func initializeSessionReplayIfEnabled() {
+            guard sessionReplayEnabled,
+                let mixpanel = mixpanelInstance
+            else { return }
+
+            // Build autoMaskedViews set from config
+            var autoMaskedViews: Set<MPAutoMaskedViews> = []
+            if maskImages { autoMaskedViews.insert(.image) }
+            if maskText { autoMaskedViews.insert(.text) }
+            if maskWebViews { autoMaskedViews.insert(.web) }
+            if maskMaps { autoMaskedViews.insert(.map) }
+
+            let config = MPSessionReplayConfig(
+                wifiOnly: wifiOnly,
+                autoMaskedViews: autoMaskedViews,
+                autoStartRecording: autoStartRecording,
+                recordingSessionsPercent: Double(recordSessionsPercent),
+                enableSessionReplayOniOS26AndLater: enableMixpanelSessionReplayOniOS26
+            )
+
+            // Initialize Session Replay asynchronously
+            MPSessionReplay.initialize(
+                token: mixpanel.apiToken,
+                distinctId: mixpanel.distinctId,
+                config: config
+            ) { [weak self] result in
+                guard let self = self else { return }
+                self.sessionReplayQueue.async {
+                    switch result {
+                    case .success(let replayInstanceOptional):
+                        guard let replayInstance = replayInstanceOptional else {
+                            NSLog(
+                                "[MPKitMixpanel] Session Replay initialization returned nil instance"
+                            )
+                            return
+                        }
+                        self._sessionReplayInstance = replayInstance
+                        // Drain any pending identity updates that occurred during initialization
+                        if let pendingId = self.pendingDistinctId {
+                            replayInstance.identify(distinctId: pendingId)
+                            self.pendingDistinctId = nil
+                        }
+                        // Drain pending opt-in start recording request
+                        if self.pendingStartRecording {
+                            replayInstance.startRecording()
+                            self.pendingStartRecording = false
+                        }
+                    case .failure(let error):
+                        NSLog(
+                            "[MPKitMixpanel] Session Replay initialization failed: %@",
+                            error.localizedDescription)
+                    }
+                }
+            }
+        }
+
+        /// Syncs identity to Session Replay, queuing if initialization is still in progress
+        private func syncSessionReplayIdentity(_ distinctId: String) {
+            guard sessionReplayEnabled else { return }
+            sessionReplayQueue.async { [weak self] in
+                guard let self = self else { return }
+                if let instance = self._sessionReplayInstance {
+                    instance.identify(distinctId: distinctId)
+                } else {
+                    // Queue identity update for when initialization completes
+                    self.pendingDistinctId = distinctId
+                }
+            }
+        }
+    #endif
 
     // MARK: - Event Forwarding
 
@@ -224,39 +397,76 @@ private enum ConfigurationKey {
 
     // MARK: - Identity Handling
 
-    @objc public func onIdentifyComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
+    @objc public func onIdentifyComplete(
+        _ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest
+    ) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
+            #if os(iOS)
+                syncSessionReplayIdentity(userId)
+            #endif
         }
 
         return execStatus(.success)
     }
 
-    @objc public func onLoginComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
+    @objc public func onLoginComplete(
+        _ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest
+    ) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
+            #if os(iOS)
+                syncSessionReplayIdentity(userId)
+                // Restart recording for the new logged-in user if auto-start is enabled
+                if sessionReplayEnabled && autoStartRecording {
+                    sessionReplayQueue.async { [weak self] in
+                        guard let self = self else { return }
+                        if let instance = self._sessionReplayInstance {
+                            instance.startRecording()
+                        } else {
+                            self.pendingStartRecording = true
+                        }
+                    }
+                }
+            #endif
         }
 
         return execStatus(.success)
     }
 
-    @objc public func onLogoutComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
+    @objc public func onLogoutComplete(
+        _ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest
+    ) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         mixpanelInstance?.reset()
+        #if os(iOS)
+            sessionReplayQueue.async { [weak self] in
+                guard let self = self else { return }
+                self._sessionReplayInstance?.stopRecording()
+                // Clear pending state to prevent stale identity/recording after async init completes
+                self.pendingDistinctId = nil
+                self.pendingStartRecording = false
+            }
+        #endif
 
         return execStatus(.success)
     }
 
-    @objc public func onModifyComplete(_ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest) -> MPKitExecStatus {
+    @objc public func onModifyComplete(
+        _ user: FilteredMParticleUser, request: FilteredMPIdentityApiRequest
+    ) -> MPKitExecStatus {
         guard started else { return execStatus(.fail) }
 
         if let userId = extractUserId(from: user) {
             mixpanelInstance?.identify(distinctId: userId)
+            #if os(iOS)
+                syncSessionReplayIdentity(userId)
+            #endif
         }
 
         return execStatus(.success)
@@ -269,20 +479,16 @@ private enum ConfigurationKey {
             return execStatus(.fail)
         }
 
-        guard let changedAttribute = user.userAttributes.keys.first,
-              let value = user.userAttributes[changedAttribute] else {
-            return execStatus(.success)
-        }
-
-        if useMixpanelPeople {
-            // Use People API
-            if let mixpanelValue = value as? MixpanelType {
-                mixpanel.people.set(property: changedAttribute, to: mixpanelValue)
-            }
-        } else {
-            // Use Super Properties
-            if let mixpanelValue = value as? MixpanelType {
-                mixpanel.registerSuperProperties([changedAttribute: mixpanelValue])
+        for (key, value) in user.userAttributes {
+            let mixpanelKey = Self.mixpanelProfileKey(for: key)
+            if useMixpanelPeople {
+                if let mixpanelValue = value as? MixpanelType {
+                    mixpanel.people.set(property: mixpanelKey, to: mixpanelValue)
+                }
+            } else {
+                if let mixpanelValue = value as? MixpanelType {
+                    mixpanel.registerSuperProperties([mixpanelKey: mixpanelValue])
+                }
             }
         }
 
@@ -302,14 +508,16 @@ private enum ConfigurationKey {
 
     /// Increment a numeric user attribute by a given value
     /// Maps to Mixpanel's people.increment() when useMixpanelPeople is enabled
-    @objc public func incrementUserAttribute(_ key: String, byValue value: NSNumber) -> MPKitExecStatus {
+    @objc public func incrementUserAttribute(_ key: String, byValue value: NSNumber)
+        -> MPKitExecStatus
+    {
         guard started, let mixpanel = mixpanelInstance else {
             return execStatus(.fail)
         }
 
         // Only increment via People API - no super property equivalent for increment
         if useMixpanelPeople {
-            mixpanel.people.increment(property: key, by: value.doubleValue)
+            mixpanel.people.increment(property: Self.mixpanelProfileKey(for: key), by: value.doubleValue)
         }
 
         return execStatus(.success)
@@ -322,10 +530,31 @@ private enum ConfigurationKey {
             return execStatus(.fail)
         }
 
+        let mixpanelKey = Self.mixpanelProfileKey(for: key)
         if useMixpanelPeople {
-            mixpanel.people.unset(properties: [key])
+            mixpanel.people.unset(properties: [mixpanelKey])
         } else {
-            mixpanel.unregisterSuperProperty(key)
+            mixpanel.unregisterSuperProperty(mixpanelKey)
+        }
+
+        return execStatus(.success)
+    }
+
+    /// Set a user attribute with a single value, uses reserved-attribute mapping.
+    @objc public func setUserAttribute(_ key: String, value: Any) -> MPKitExecStatus {
+        guard started, let mixpanel = mixpanelInstance else {
+            return execStatus(.fail)
+        }
+
+        let mixpanelKey = Self.mixpanelProfileKey(for: key)
+        guard let mixpanelValue = value as? MixpanelType else {
+            return execStatus(.success)
+        }
+
+        if useMixpanelPeople {
+            mixpanel.people.set(property: mixpanelKey, to: mixpanelValue)
+        } else {
+            mixpanel.registerSuperProperties([mixpanelKey: mixpanelValue])
         }
 
         return execStatus(.success)
@@ -338,13 +567,13 @@ private enum ConfigurationKey {
             return execStatus(.fail)
         }
 
-        // Convert array to MixpanelType array
+        let mixpanelKey = Self.mixpanelProfileKey(for: key)
         let mixpanelValues = values.compactMap { $0 as? MixpanelType }
 
         if useMixpanelPeople {
-            mixpanel.people.set(property: key, to: mixpanelValues)
+            mixpanel.people.set(property: mixpanelKey, to: mixpanelValues)
         } else {
-            mixpanel.registerSuperProperties([key: mixpanelValues])
+            mixpanel.registerSuperProperties([mixpanelKey: mixpanelValues])
         }
 
         return execStatus(.success)
@@ -359,8 +588,40 @@ private enum ConfigurationKey {
 
         if optOut {
             mixpanel.optOutTracking()
+            #if os(iOS)
+                sessionReplayQueue.async { [weak self] in
+                    guard let self = self else { return }
+                    // If session replay is not currently recording, the user manually stopped it;
+                    // preserve that intent so opt-in won't auto-restart recording
+                    if let instance = self._sessionReplayInstance, !instance.isRecording {
+                        self.wasManuallyStoppedBeforeOptOut = true
+                    }
+                    self._sessionReplayInstance?.stopRecording()
+                    // Clear all pending state to prevent actions contradicting opt-out intent
+                    self.pendingStartRecording = false
+                    self.pendingDistinctId = nil
+                }
+            #endif
         } else {
             mixpanel.optInTracking()
+            #if os(iOS)
+                if sessionReplayEnabled && autoStartRecording && !wasManuallyStoppedBeforeOptOut {
+                    let currentDistinctId = mixpanel.distinctId
+                    sessionReplayQueue.async { [weak self] in
+                        guard let self = self else { return }
+                        if let instance = self._sessionReplayInstance {
+                            // Sync identity before resuming — distinctId may have changed while opted out
+                            instance.identify(distinctId: currentDistinctId)
+                            instance.startRecording()
+                        } else {
+                            // Queue identity sync and start recording for when initialization completes
+                            self.pendingDistinctId = currentDistinctId
+                            self.pendingStartRecording = true
+                        }
+                    }
+                }
+                wasManuallyStoppedBeforeOptOut = false
+            #endif
         }
 
         return execStatus(.success)
@@ -410,10 +671,36 @@ private enum ConfigurationKey {
         return mixpanelInstance
     }
 
+    #if os(iOS)
+        /// Access to the underlying Session Replay instance for advanced control.
+        /// Returns nil if Session Replay is not enabled or not initialized.
+        @objc public var sessionReplayProviderInstance: Any? {
+            guard started, sessionReplayEnabled else { return nil }
+            return _sessionReplayInstance
+        }
+    #endif
+
     // MARK: - Helpers
 
     private func execStatus(_ returnCode: MPKitReturnCode) -> MPKitExecStatus {
         return MPKitExecStatus(sdkCode: Self.kitCode(), returnCode: returnCode)
+    }
+
+    /// mParticle reserved keys mapped to Mixpanel reserved user attribute keys.
+    /// https://docs.mixpanel.com/docs/data-structure/property-reference/reserved-properties
+    private static let reservedKeyToMixpanel: [String: String] = [
+        "$FirstName": "$first_name",
+        "$LastName": "$last_name",
+        "$Email": "$email",
+        "$Mobile": "$phone",
+        "$Country": "$country_code",
+        "$City": "$city",
+        "$State": "$region"
+    ]
+
+    /// Returns the Mixpanel profile key for a given mParticle reserved attribute key
+    internal static func mixpanelProfileKey(for key: String) -> String {
+        return reservedKeyToMixpanel[key] ?? key
     }
 }
 
