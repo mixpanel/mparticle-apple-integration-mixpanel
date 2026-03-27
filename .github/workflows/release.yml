@@ -31,8 +31,9 @@ jobs:
         fetch-depth: 0
 
     - name: Validate version format
+      env:
+        VERSION: ${{ inputs.version }}
       run: |
-        VERSION="${{ inputs.version }}"
         if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           echo "::error::Version must be semver (e.g., 1.0.0), got: $VERSION"
           exit 1
@@ -40,12 +41,14 @@ jobs:
         echo "Version $VERSION is valid"
 
     - name: Check tag does not exist
+      env:
+        VERSION: ${{ inputs.version }}
       run: |
-        if git tag -l "v${{ inputs.version }}" | grep -q .; then
-          echo "::error::Tag v${{ inputs.version }} already exists"
+        if git tag -l "v$VERSION" | grep -q .; then
+          echo "::error::Tag v$VERSION already exists"
           exit 1
         fi
-        echo "Tag v${{ inputs.version }} is available"
+        echo "Tag v$VERSION is available"
 
     - name: Verify on main branch
       run: |
@@ -64,9 +67,11 @@ jobs:
         fetch-depth: 0
 
     - name: Bump version
+      env:
+        VERSION: ${{ inputs.version }}
       run: |
         chmod +x Scripts/bump-version.sh
-        Scripts/bump-version.sh "${{ inputs.version }}"
+        Scripts/bump-version.sh "$VERSION"
 
     - name: CocoaPods Lint
       run: pod lib lint mParticle-Mixpanel.podspec --allow-warnings
@@ -94,22 +99,28 @@ jobs:
           -enableCodeCoverage YES \
           CODE_SIGNING_ALLOWED='NO'
 
+    # NOTE: This pushes directly to main. Branch protection rules should
+    # allow the github-actions[bot] to push version bump commits.
     - name: Commit and tag
       if: ${{ inputs.dry_run == false }}
+      env:
+        VERSION: ${{ inputs.version }}
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add mParticle-Mixpanel.podspec Sources/mParticle-Mixpanel/MPKitMixpanel+Version.swift
-        git commit -m "Release v${{ inputs.version }}"
+        git commit -m "Release v$VERSION"
         git push origin main
-        git tag "v${{ inputs.version }}"
-        git push origin "v${{ inputs.version }}"
+        git tag "v$VERSION"
+        git push origin "v$VERSION"
 
     - name: Dry run summary
       if: ${{ inputs.dry_run == true }}
+      env:
+        VERSION: ${{ inputs.version }}
       run: |
         echo "## Dry Run Complete" >> $GITHUB_STEP_SUMMARY
-        echo "Version ${{ inputs.version }} validated successfully:" >> $GITHUB_STEP_SUMMARY
+        echo "Version $VERSION validated successfully:" >> $GITHUB_STEP_SUMMARY
         echo "- Version bump: OK" >> $GITHUB_STEP_SUMMARY
         echo "- Pod lint: OK" >> $GITHUB_STEP_SUMMARY
         echo "- Build: OK" >> $GITHUB_STEP_SUMMARY
@@ -129,12 +140,14 @@ jobs:
 
     - name: Generate changelog
       id: changelog
+      env:
+        VERSION: ${{ inputs.version }}
       run: |
-        PREV_TAG=$(git tag --sort=-v:refname | grep -v "v${{ inputs.version }}" | head -1)
+        PREV_TAG=$(git tag --sort=-v:refname | grep -v "v$VERSION" | head -1)
         if [ -z "$PREV_TAG" ]; then
-          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "v${{ inputs.version }}")
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "v$VERSION")
         else
-          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..v${{ inputs.version }}")
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..v${VERSION}")
         fi
         # Write to file to handle multiline
         echo "$CHANGELOG" > /tmp/changelog.md
