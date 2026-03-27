@@ -10,15 +10,16 @@ Pod::Spec.new do |s|
     s.homepage         = "https://www.mparticle.com"
     s.license          = { :type => 'Apache 2.0', :file => 'LICENSE' }
     s.author           = { "mParticle" => "support@mparticle.com" }
-    s.source           = { :git => "https://github.com/mparticle-integrations/mparticle-apple-integration-mixpanel.git", :tag => "v" + s.version.to_s }
+    s.source           = { :git => "https://github.com/mixpanel/mparticle-apple-integration-mixpanel.git", :tag => "v" + s.version.to_s }
     s.social_media_url = "https://twitter.com/mparticle"
     s.swift_versions   = ['5.7', '5.8', '5.9']
 
-    s.ios.deployment_target = "12.0"
+    s.ios.deployment_target = "13.0"
     s.tvos.deployment_target = "12.0"
 
     s.source_files = 'Sources/mParticle-Mixpanel/**/*.swift'
 
     s.dependency 'mParticle-Apple-SDK', '~> 8.0'
     s.dependency 'Mixpanel-swift', '~> 4.0'
+    s.ios.dependency 'MixpanelSessionReplay', '~> 1.0'
 end

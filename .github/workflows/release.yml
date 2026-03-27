@@ -1,0 +1,169 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.0.0)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (validate without publishing)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: macos-latest
+    outputs:
+      version: ${{ inputs.version }}
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        fetch-depth: 0
+
+    - name: Validate version format
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::Version must be semver (e.g., 1.0.0), got: $VERSION"
+          exit 1
+        fi
+        echo "Version $VERSION is valid"
+
+    - name: Check tag does not exist
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        if git tag -l "v$VERSION" | grep -q .; then
+          echo "::error::Tag v$VERSION already exists"
+          exit 1
+        fi
+        echo "Tag v$VERSION is available"
+
+    - name: Verify on main branch
+      run: |
+        BRANCH="${{ github.ref_name }}"
+        if [[ "$BRANCH" != "main" ]]; then
+          echo "::error::Releases must be triggered from main branch, got: $BRANCH"
+          exit 1
+        fi
+
+  bump-and-lint:
+    needs: validate
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        fetch-depth: 0
+
+    - name: Bump version
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        chmod +x Scripts/bump-version.sh
+        Scripts/bump-version.sh "$VERSION"
+
+    - name: CocoaPods Lint
+      run: pod lib lint mParticle-Mixpanel.podspec --allow-warnings
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    - name: Resolve Swift Package Dependencies
+      run: swift package resolve
+
+    - name: Build for iOS Simulator
+      run: |
+        xcodebuild build \
+          -scheme mParticle-Mixpanel \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+          CODE_SIGNING_ALLOWED='NO'
+
+    - name: Run tests for iOS Simulator
+      run: |
+        xcodebuild test \
+          -scheme mParticle-Mixpanel \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+          -enableCodeCoverage YES \
+          CODE_SIGNING_ALLOWED='NO'
+
+    # NOTE: This pushes directly to main. Branch protection rules should
+    # allow the github-actions[bot] to push version bump commits.
+    - name: Commit and tag
+      if: ${{ inputs.dry_run == false }}
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add mParticle-Mixpanel.podspec Sources/mParticle-Mixpanel/MPKitMixpanel+Version.swift
+        git commit -m "Release v$VERSION"
+        git push origin main
+        git tag "v$VERSION"
+        git push origin "v$VERSION"
+
+    - name: Dry run summary
+      if: ${{ inputs.dry_run == true }}
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        echo "## Dry Run Complete" >> $GITHUB_STEP_SUMMARY
+        echo "Version $VERSION validated successfully:" >> $GITHUB_STEP_SUMMARY
+        echo "- Version bump: OK" >> $GITHUB_STEP_SUMMARY
+        echo "- Pod lint: OK" >> $GITHUB_STEP_SUMMARY
+        echo "- Build: OK" >> $GITHUB_STEP_SUMMARY
+        echo "- Tests: OK" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Run again with dry_run=false to publish." >> $GITHUB_STEP_SUMMARY
+
+  release:
+    needs: bump-and-lint
+    if: ${{ inputs.dry_run == false }}
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        ref: "v${{ inputs.version }}"
+        fetch-depth: 0
+
+    - name: Generate changelog
+      id: changelog
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        PREV_TAG=$(git tag --sort=-v:refname | grep -v "v$VERSION" | head -1)
+        if [ -z "$PREV_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "v$VERSION")
+        else
+          CHANGELOG=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..v${VERSION}")
+        fi
+        # Write to file to handle multiline
+        echo "$CHANGELOG" > /tmp/changelog.md
+        echo "Changelog:"
+        cat /tmp/changelog.md
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
+      with:
+        tag_name: "v${{ inputs.version }}"
+        name: "v${{ inputs.version }}"
+        body_path: /tmp/changelog.md
+        draft: false
+        prerelease: false
+
+    - name: Publish to CocoaPods
+      env:
+        COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+      run: pod trunk push mParticle-Mixpanel.podspec --allow-warnings
