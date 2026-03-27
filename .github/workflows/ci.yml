@@ -6,12 +6,15 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
     - name: Show Xcode version
       run: xcodebuild -version
     - name: Resolve Swift Package Dependencies
@@ -36,6 +39,6 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
     - name: CocoaPods Lint
       run: pod lib lint mParticle-Mixpanel.podspec --allow-warnings
