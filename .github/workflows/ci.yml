@@ -1,7 +1,4 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
-name: Swift
+name: CI
 
 on:
   push:
@@ -10,8 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  build-and-test:
     runs-on: macos-latest
 
     steps:
@@ -35,3 +31,11 @@ jobs:
           -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
           -enableCodeCoverage YES \
           CODE_SIGNING_ALLOWED='NO'
+
+  pod-lint:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: CocoaPods Lint
+      run: pod lib lint mParticle-Mixpanel.podspec --allow-warnings
