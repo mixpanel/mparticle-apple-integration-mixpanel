@@ -21,4 +21,5 @@ Pod::Spec.new do |s|
 
     s.dependency 'mParticle-Apple-SDK', '~> 8.0'
     s.dependency 'Mixpanel-swift', '~> 4.0'
+    s.ios.dependency 'MixpanelSessionReplay', '~> 1.0'
 end
