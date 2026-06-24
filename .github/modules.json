@@ -1,0 +1,13 @@
+{
+  "mparticle-mixpanel": {
+    "tag_prefix": "",
+    "podspec": "mParticle-Mixpanel.podspec",
+    "version_files": [
+      "mParticle-Mixpanel.podspec",
+      "Sources/mParticle-Mixpanel/MPKitMixpanel+Version.swift"
+    ],
+    "changelog": "CHANGELOG.md",
+    "readme": "README.md",
+    "package_name": "mparticle-apple-integration-mixpanel"
+  }
+}
