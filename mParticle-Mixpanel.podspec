@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
     s.name             = "mParticle-Mixpanel"
-    s.version          = "1.0.0"
+    s.version          = '1.0.0'
     s.summary          = "Mixpanel integration for mParticle"
 
     s.description      = <<-DESC
@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
     s.homepage         = "https://www.mparticle.com"
     s.license          = { :type => 'Apache 2.0', :file => 'LICENSE' }
     s.author           = { "mParticle" => "support@mparticle.com" }
-    s.source           = { :git => "https://github.com/mixpanel/mparticle-apple-integration-mixpanel.git", :tag => "v" + s.version.to_s }
+    s.source           = { :git => "https://github.com/mixpanel/mparticle-apple-integration-mixpanel.git", :tag => s.version.to_s }
     s.social_media_url = "https://twitter.com/mparticle"
     s.swift_versions   = ['5.7', '5.8', '5.9']
 
