@@ -28,6 +28,10 @@ dependencies: [
 >   ```ruby
 >   pod 'mParticle-Mixpanel', :git => 'https://github.com/mixpanel/mparticle-apple-integration-mixpanel.git', :tag => 'vX.Y.Z'
 >   ```
+>   If `pod install` can't find a version of a Mixpanel dependency, such as `Mixpanel-swift` or `MixpanelSessionReplay`, add that dependency from GitHub the same way:
+>   ```ruby
+>   pod 'Mixpanel-swift', :git => 'https://github.com/mixpanel/mixpanel-swift.git', :tag => 'X.Y.Z'
+>   ```
 > - **After November 2027:** CocoaPods support will be removed in a future major version of the SDK.
 
 If your project already uses CocoaPods:
