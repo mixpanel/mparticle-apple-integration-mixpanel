@@ -55,4 +55,11 @@ jobs:
     steps:
     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
     - name: CocoaPods Lint
-      run: pod lib lint mParticle-Mixpanel.podspec --allow-warnings
+      run: |
+        # Mixpanel dependencies that aren't on CocoaPods trunk are linted from their git tags.
+        ruby Scripts/fetch-dependency-podspecs.rb mParticle-Mixpanel.podspec "$RUNNER_TEMP/pod-deps"
+        EXTERNAL=()
+        if compgen -G "$RUNNER_TEMP/pod-deps/*.podspec" > /dev/null; then
+          EXTERNAL=(--external-podspecs="$RUNNER_TEMP/pod-deps/*.podspec")
+        fi
+        pod lib lint mParticle-Mixpanel.podspec --allow-warnings "${EXTERNAL[@]}"

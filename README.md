@@ -8,7 +8,7 @@ This is the [Mixpanel](https://mixpanel.com) integration for the [mParticle Appl
 
 ## Installation
 
-### Swift Package Manager
+### Swift Package Manager (recommended)
 
 Add the package dependency to your `Package.swift`:
 
@@ -18,15 +18,27 @@ dependencies: [
 ]
 ```
 
-### CocoaPods
+### CocoaPods (deprecated)
 
-Add the following to your `Podfile`:
+> [!WARNING]
+> CocoaPods support is deprecated. We recommend migrating to Swift Package Manager.
+>
+> - **December 2, 2026:** CocoaPods trunk becomes read-only. Versions already published there keep installing with `pod 'mParticle-Mixpanel'`, but new versions are not published to trunk.
+> - **Until removal:** install newer versions directly from GitHub. Replace `vX.Y.Z` with the [release](https://github.com/mixpanel/mparticle-apple-integration-mixpanel/releases) you want:
+>   ```ruby
+>   pod 'mParticle-Mixpanel', :git => 'https://github.com/mixpanel/mparticle-apple-integration-mixpanel.git', :tag => 'vX.Y.Z'
+>   ```
+>   If `pod install` can't find a version of a Mixpanel dependency, such as `Mixpanel-swift` or `MixpanelSessionReplay`, add that dependency from GitHub the same way:
+>   ```ruby
+>   pod 'Mixpanel-swift', :git => 'https://github.com/mixpanel/mixpanel-swift.git', :tag => 'X.Y.Z'
+>   ```
+> - **After November 2027:** CocoaPods support will be removed in a future major version of the SDK.
 
-```ruby
-pod 'mParticle-Mixpanel', '~> 1.0'
-```
+If your project already uses CocoaPods:
+1. Add `pod 'mParticle-Mixpanel', '~> 1.0'` to your Podfile (or the `:git` line above for versions after the trunk freeze).
+2. Run `pod install` in your Xcode project directory.
 
-Then run `pod install`.
+New to CocoaPods? Use [Swift Package Manager](#swift-package-manager-recommended) instead.
 
 ## Requirements
 
